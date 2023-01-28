@@ -1,3 +1,8 @@
+mod cli;
+
+use crate::cli::SlightCommand;
+
 fn main() {
-    println!("Hello, world!");
+    let args: SlightCommand = argh::from_env();
+    println!("{args:?}");
 }
