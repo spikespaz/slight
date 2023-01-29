@@ -20,13 +20,13 @@ use argh::FromArgs;
 pub struct SlightCommand {
     /// what to do?
     #[argh(subcommand)]
-    command: Action,
+    pub command: Action,
     /// show errors
     #[argh(switch, short = 'v')]
-    verbose: bool,
+    pub verbose: bool,
     /// the device to control
     #[argh(option, short = 'D')]
-    device: Option<PathBuf>,
+    pub device: Option<PathBuf>,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -50,10 +50,10 @@ pub struct ActionList {}
 pub struct ActionGet {
     /// show the value as a percentage
     #[argh(switch, short = 'p')]
-    percent: bool,
+    pub percent: bool,
     /// percentage curve function (raw to percent)
     #[argh(option)]
-    curve: Option<String>,
+    pub curve: Option<String>,
 }
 
 /// set the brightness value
@@ -62,13 +62,13 @@ pub struct ActionGet {
 pub struct ActionSet {
     /// percentage or value to set
     #[argh(positional)]
-    value: Value,
+    pub value: Value,
     /// percentage curve function
     #[argh(option)]
-    curve: Option<String>,
+    pub curve: Option<String>,
     /// duration of time when interpolating between 0% and 100%
     #[argh(option, short = 't', from_str_fn(duration_from_str))]
-    duration: Option<Duration>,
+    pub duration: Option<Duration>,
 }
 
 /// increase the brightness value
@@ -77,13 +77,13 @@ pub struct ActionSet {
 pub struct ActionIncrease {
     /// percentage or value to add
     #[argh(positional)]
-    by: Value,
+    pub by: Value,
     /// percentage curve function
     #[argh(option)]
-    curve: Option<String>,
+    pub curve: Option<String>,
     /// duration of time over which to interpolate the change
     #[argh(option, short = 't', from_str_fn(duration_from_str))]
-    duration: Option<Duration>,
+    pub duration: Option<Duration>,
 }
 
 /// decrease the brightness value
@@ -92,13 +92,13 @@ pub struct ActionIncrease {
 pub struct ActionDecrease {
     /// percentage or value to subtract
     #[argh(positional)]
-    by: Value,
+    pub by: Value,
     /// percentage curve function
     #[argh(option)]
-    curve: Option<String>,
+    pub curve: Option<String>,
     /// duration of time over which to interpolate the change
     #[argh(option, short = 't', from_str_fn(duration_from_str))]
-    duration: Option<Duration>,
+    pub duration: Option<Duration>,
 }
 
 #[derive(PartialEq, Debug)]
