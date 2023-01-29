@@ -73,7 +73,7 @@ pub struct ActionSet {
 
 /// increase the brightness value
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "increase")]
+#[argh(subcommand, name = "inc")]
 pub struct ActionIncrease {
     /// percentage or value to add
     #[argh(positional)]
@@ -88,7 +88,7 @@ pub struct ActionIncrease {
 
 /// decrease the brightness value
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "decrease")]
+#[argh(subcommand, name = "dec")]
 pub struct ActionDecrease {
     /// percentage or value to subtract
     #[argh(positional)]
