@@ -77,7 +77,7 @@ pub struct ActionSet {
 pub struct ActionIncrease {
     /// percentage or value to add
     #[argh(positional)]
-    pub by: Value,
+    pub amount: Value,
     /// percentage curve function
     #[argh(option)]
     pub curve: Option<String>,
@@ -92,7 +92,7 @@ pub struct ActionIncrease {
 pub struct ActionDecrease {
     /// percentage or value to subtract
     #[argh(positional)]
-    pub by: Value,
+    pub amount: Value,
     /// percentage curve function
     #[argh(option)]
     pub curve: Option<String>,
