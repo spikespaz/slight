@@ -32,11 +32,17 @@ pub struct SlightCommand {
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
 pub enum Action {
+    List(ActionList),
     Get(ActionGet),
     Set(ActionSet),
     Increase(ActionIncrease),
     Decrease(ActionDecrease),
 }
+
+/// list all discovered backlight devices
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand, name = "list")]
+pub struct ActionList {}
 
 /// get the current brightness value
 #[derive(FromArgs, PartialEq, Debug)]
