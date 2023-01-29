@@ -87,7 +87,7 @@ impl BacklightDevice {
         let mut file = device_file!(self, file_brightness, "brightness", true)?;
         let mut buf = String::new();
         file.read_to_string(&mut buf)?;
-        Ok(buf.parse()?)
+        Ok(buf.trim().parse()?)
     }
 
     pub fn set_brightness(&self, value: u32) -> WriteResult {
@@ -100,20 +100,20 @@ impl BacklightDevice {
         let mut file = device_file!(self, file_actual_brightness, "brightness", false)?;
         let mut buf = String::new();
         file.read_to_string(&mut buf)?;
-        Ok(buf.parse()?)
+        Ok(buf.trim().parse()?)
     }
 
     pub fn max_brightness(&self) -> ReadNumResult<u32> {
         let mut file = device_file!(self, file_max_brightness, "max_brightness", false)?;
         let mut buf = String::new();
         file.read_to_string(&mut buf)?;
-        Ok(buf.parse()?)
+        Ok(buf.trim().parse()?)
     }
 
     pub fn r#type(&self) -> std::io::Result<DeviceType> {
         let mut file = device_file!(self, file_type, "type", false)?;
         let mut buf = String::new();
         file.read_to_string(&mut buf)?;
-        Ok(buf.parse::<DeviceType>().unwrap())
+        Ok(buf.trim().parse().unwrap())
     }
 }
