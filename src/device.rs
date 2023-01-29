@@ -25,7 +25,7 @@ pub struct BacklightDevice {
     file_brightness: OnceCell<File>,
     file_actual_brightness: OnceCell<File>,
     file_max_brightness: OnceCell<File>,
-    file_type: OnceCell<File>,
+    device_type: OnceCell<DeviceType>,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -61,7 +61,7 @@ impl BacklightDevice {
             file_brightness: OnceCell::new(),
             file_actual_brightness: OnceCell::new(),
             file_max_brightness: OnceCell::new(),
-            file_type: OnceCell::new(),
+            device_type: OnceCell::new(),
         }
     }
 
@@ -110,9 +110,13 @@ impl BacklightDevice {
     }
 
     pub fn device_type(&self) -> std::io::Result<DeviceType> {
-        let mut file = device_file!(self, file_type, "type", false)?;
-        let mut buf = String::new();
-        file.read_to_string(&mut buf)?;
-        Ok(buf.trim().parse().unwrap())
+        self.device_type
+            .get_or_try_init(|| {
+                let mut file = File::open(self.path.join("type"))?;
+                let mut buf = String::new();
+                file.read_to_string(&mut buf)?;
+                Ok(buf.trim().parse().unwrap())
+            })
+            .copied()
     }
 }
