@@ -109,7 +109,7 @@ impl BacklightDevice {
         Ok(buf.trim().parse()?)
     }
 
-    pub fn r#type(&self) -> std::io::Result<DeviceType> {
+    pub fn device_type(&self) -> std::io::Result<DeviceType> {
         let mut file = device_file!(self, file_type, "type", false)?;
         let mut buf = String::new();
         file.read_to_string(&mut buf)?;
