@@ -67,8 +67,7 @@ impl BacklightDevice {
 
     pub fn bl_power(&self) -> std::io::Result<PowerState> {
         let mut file = device_file!(self, file_bl_power, "bl_power", true)?;
-        let mut buf = Vec::<u8>::new();
-        let mut buf = [0_u8; 1];
+        let mut buf = [0_u8];
         file.read_exact(&mut buf)?;
         match &buf {
             b"0" => Ok(PowerState::Unblank),
