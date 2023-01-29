@@ -1,3 +1,4 @@
+mod device;
 mod cli;
 
 use crate::cli::SlightCommand;
