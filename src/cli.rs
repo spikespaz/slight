@@ -103,7 +103,7 @@ pub struct ActionDecrease {
 
 #[derive(PartialEq, Debug)]
 pub enum Value {
-    Percent(u8),
+    Percent(f32),
     Absolute(u32),
 }
 
@@ -114,7 +114,9 @@ impl FromStr for Value {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         if value.ends_with('%') {
-            Ok(Self::Percent(value[0..value.len() - 1].parse()?))
+            Ok(Self::Percent(
+                value[0..value.len() - 1].parse::<u8>()? as f32 / 100.0,
+            ))
         } else {
             Ok(Self::Absolute(value.parse()?))
         }
