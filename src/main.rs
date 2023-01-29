@@ -1,7 +1,8 @@
 mod cli;
 mod device;
 
-use crate::cli::SlightCommand;
+use crate::cli::{SlightCommand, Value};
+use crate::device::BacklightDevice;
 
 fn main() {
     let args: SlightCommand = argh::from_env();
@@ -14,7 +15,18 @@ fn main() {
     match args.command {
         List(_) => {}
         Get(ActionGet { percent }) => {}
-        Set(ActionSet { value, duration }) => {}
+        Set(ActionSet { value, duration }) => {
+            let dev = BacklightDevice::new(device.unwrap());
+            let target = match value {
+                Value::Absolute(value) => value,
+                Value::Percent(mul) => {
+                    let max = dev.max_brightness().expect("could not read max_brightness");
+                    (mul * max as f32) as u32
+                }
+            };
+            dev.set_brightness(target)
+                .expect("failed to set brightness");
+        }
         Increase(ActionIncrease { amount, duration }) => {}
         Decrease(ActionDecrease { amount, duration }) => {}
     };
