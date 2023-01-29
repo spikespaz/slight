@@ -13,21 +13,9 @@ fn main() {
 
     match args.command {
         List(_) => {}
-        Get(ActionGet { percent, curve }) => {}
-        Set(ActionSet {
-            value,
-            curve,
-            duration,
-        }) => {}
-        Increase(ActionIncrease {
-            amount,
-            curve,
-            duration,
-        }) => {}
-        Decrease(ActionDecrease {
-            amount,
-            curve,
-            duration,
-        }) => {}
+        Get(ActionGet { percent }) => {}
+        Set(ActionSet { value, duration }) => {}
+        Increase(ActionIncrease { amount, duration }) => {}
+        Decrease(ActionDecrease { amount, duration }) => {}
     };
 }

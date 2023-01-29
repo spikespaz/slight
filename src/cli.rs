@@ -51,9 +51,9 @@ pub struct ActionGet {
     /// show the value as a percentage
     #[argh(switch, short = 'p')]
     pub percent: bool,
-    /// percentage curve function (raw to percent)
-    #[argh(option)]
-    pub curve: Option<String>,
+    // /// percentage curve function (raw to percent)
+    // #[argh(option)]
+    // pub curve: Option<String>,
 }
 
 /// set the brightness value
@@ -63,9 +63,9 @@ pub struct ActionSet {
     /// percentage or value to set
     #[argh(positional)]
     pub value: Value,
-    /// percentage curve function
-    #[argh(option)]
-    pub curve: Option<String>,
+    // /// percentage curve function
+    // #[argh(option)]
+    // pub curve: Option<String>,
     /// duration of time when interpolating between 0% and 100%
     #[argh(option, short = 't', from_str_fn(duration_from_str))]
     pub duration: Option<Duration>,
@@ -78,9 +78,9 @@ pub struct ActionIncrease {
     /// percentage or value to add
     #[argh(positional)]
     pub amount: Value,
-    /// percentage curve function
-    #[argh(option)]
-    pub curve: Option<String>,
+    // /// percentage curve function
+    // #[argh(option)]
+    // pub curve: Option<String>,
     /// duration of time over which to interpolate the change
     #[argh(option, short = 't', from_str_fn(duration_from_str))]
     pub duration: Option<Duration>,
@@ -93,9 +93,9 @@ pub struct ActionDecrease {
     /// percentage or value to subtract
     #[argh(positional)]
     pub amount: Value,
-    /// percentage curve function
-    #[argh(option)]
-    pub curve: Option<String>,
+    // /// percentage curve function
+    // #[argh(option)]
+    // pub curve: Option<String>,
     /// duration of time over which to interpolate the change
     #[argh(option, short = 't', from_str_fn(duration_from_str))]
     pub duration: Option<Duration>,
