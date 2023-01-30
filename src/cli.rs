@@ -101,7 +101,7 @@ pub struct ActionDecrease {
     pub duration: Option<Duration>,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 pub enum Value {
     Percent(f32),
     Absolute(u32),
