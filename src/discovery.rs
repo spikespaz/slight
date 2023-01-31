@@ -1,10 +1,12 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
+use strum::Display;
 use thiserror::Error;
 
 const BRIGHTNESS_CAPABILITY_FILES: &[&str; 2] = &["brightness", "max_brightness"];
 const BACKLIGHT_CAPABILITY_FILES: &[&str; 3] = &["actual_brightness", "bl_power", "type"];
 
+#[derive(Debug, Display, Clone, Copy)]
 pub enum Capability {
     Brightness,
     Backlight,
@@ -44,7 +46,7 @@ impl CapabilityCheckError {
 }
 
 impl Capability {
-    fn check(path: &Path) -> Result<Self, CapabilityCheckError> {
+    pub fn check(path: &Path) -> Result<Self, CapabilityCheckError> {
         // do checks on the path to make sure all further errors are
         // truly unexpected, bubble error
         match path.try_exists() {
@@ -103,5 +105,32 @@ impl Capability {
         } else {
             Capability::None
         })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DeviceDetail {
+    pub name: String,
+    pub path: PathBuf,
+    pub capability: Capability,
+}
+
+impl TryFrom<PathBuf> for DeviceDetail {
+    type Error = ();
+
+    fn try_from(path: PathBuf) -> Result<Self, ()> {
+        let capability = Capability::check(&path);
+        match capability {
+            Err(_) => Err(()),
+            Ok(Capability::None) => Err(()),
+            Ok(_) => {
+                let name = path.file_name().ok_or(())?;
+                Ok(Self {
+                    name: name.to_owned().into_string().or(Err(()))?,
+                    path,
+                    capability: capability.unwrap(),
+                })
+            }
+        }
     }
 }
