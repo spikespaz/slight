@@ -6,11 +6,6 @@ use std::time::Duration;
 use crate::cli::{SlightCommand, Value};
 use crate::device::BacklightDevice;
 
-enum DeltaValue {
-    Increase(Value),
-    Decrease(Value),
-}
-
 const FAIL_R_MAX_BRIGHTNESS: &str = "failed to read max_brightness";
 const FAIL_W_BRIGHTNESS: &str = "failed to write brightness";
 const FAIL_R_BRIGHTNESS: &str = "failed to read brightness";
@@ -34,11 +29,13 @@ fn main() {
         }
         Increase(ActionIncrease { amount, duration }) => {
             let device = BacklightDevice::new(device);
-            change_brightness(DeltaValue::Increase(amount), &device, duration);
+            let delta = value_to_absolute(amount, &device) as i32;
+            change_brightness(delta, &device, duration);
         }
         Decrease(ActionDecrease { amount, duration }) => {
             let device = BacklightDevice::new(device);
-            change_brightness(DeltaValue::Decrease(amount), &device, duration);
+            let delta = value_to_absolute(amount, &device) as i32;
+            change_brightness(-delta, &device, duration);
         }
     };
 }
@@ -53,20 +50,11 @@ fn value_to_absolute(value: Value, device: &BacklightDevice) -> u32 {
     }
 }
 
-fn change_brightness(amount: DeltaValue, device: &BacklightDevice, duration: Option<Duration>) {
-    let value = match amount {
-        DeltaValue::Increase(value) => {
-            let delta = value_to_absolute(value, device);
-            let actual = device.actual_brightness().expect(FAIL_R_ACTUAL_BRIGHTNESS);
-            (actual + delta).max(device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS))
-        }
-        DeltaValue::Decrease(value) => {
-            let delta = value_to_absolute(value, device);
-            let actual = device.actual_brightness().expect(FAIL_R_ACTUAL_BRIGHTNESS);
-            actual.saturating_sub(delta)
-        }
-    };
+fn change_brightness(amount: i32, device: &BacklightDevice, duration: Option<Duration>) {
+    let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
+    let actual = device.actual_brightness().expect(FAIL_R_ACTUAL_BRIGHTNESS);
+    let value = (actual as i32 + amount).clamp(0, max as i32);
     device
-        .set_brightness(value)
+        .set_brightness(value as u32)
         .expect("failed to write brightness");
 }
