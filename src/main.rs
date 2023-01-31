@@ -1,5 +1,6 @@
 mod cli;
 mod device;
+mod discovery;
 
 use std::time::Duration;
 
