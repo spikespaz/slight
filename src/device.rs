@@ -1,5 +1,3 @@
-/// This API corresponds to:
-/// <https://www.kernel.org/doc/Documentation/ABI/stable/sysfs-class-backlight>
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -18,16 +16,6 @@ pub enum ReadNumError {
 pub type ReadNumResult<T> = Result<T, ReadNumError>;
 pub type WriteResult = std::io::Result<()>;
 
-#[derive(Debug)]
-pub struct BacklightDevice {
-    path: PathBuf,
-    file_bl_power: OnceCell<File>,
-    file_brightness: OnceCell<File>,
-    file_actual_brightness: OnceCell<File>,
-    max_brightness: OnceCell<u32>,
-    device_type: OnceCell<DeviceType>,
-}
-
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum PowerState {
     Unblank = 0,
@@ -42,15 +30,53 @@ pub enum DeviceType {
     Raw,
 }
 
-macro_rules! device_file {
-    ($self:ident, $field:ident, $subpath:literal, $write:literal) => {
-        $self.$field.get_or_try_init(|| {
-            OpenOptions::new()
-                .read(true)
-                .write($write)
-                .open($self.path.join($subpath))
-        })
-    };
+/// This API corresponds to the basics that `sysfs-class-led` and
+/// `sysfs-class-backlight` have in common.
+///
+/// TODO: missing `trigger`.
+///
+/// There is more to LED devices that is not specified by this trait.
+/// <https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-class-led>
+pub trait Brightness {
+    fn brightness(&self) -> ReadNumResult<u32>;
+    fn set_brightness(&self, value: u32) -> WriteResult;
+    fn max_brightness(&self) -> ReadNumResult<u32>;
+}
+
+/// This API corresponds to:
+/// <https://www.kernel.org/doc/Documentation/ABI/stable/sysfs-class-backlight>
+pub trait Backlight: Brightness {
+    fn bl_power(&self) -> std::io::Result<PowerState>;
+    fn set_bl_power(&self, value: PowerState) -> WriteResult;
+    fn actual_brightness(&self) -> ReadNumResult<u32>;
+    fn device_type(&self) -> std::io::Result<DeviceType>;
+}
+
+#[derive(Debug)]
+pub struct LedDevice {
+    path: PathBuf,
+    file_brightness: OnceCell<File>,
+    max_brightness: OnceCell<u32>,
+}
+
+#[derive(Debug)]
+pub struct BacklightDevice {
+    path: PathBuf,
+    file_bl_power: OnceCell<File>,
+    file_brightness: OnceCell<File>,
+    file_actual_brightness: OnceCell<File>,
+    max_brightness: OnceCell<u32>,
+    device_type: OnceCell<DeviceType>,
+}
+
+impl LedDevice {
+    pub fn new(path: PathBuf) -> Self {
+        Self {
+            path,
+            file_brightness: OnceCell::new(),
+            max_brightness: OnceCell::new(),
+        }
+    }
 }
 
 impl BacklightDevice {
@@ -64,8 +90,54 @@ impl BacklightDevice {
             device_type: OnceCell::new(),
         }
     }
+}
 
-    pub fn bl_power(&self) -> std::io::Result<PowerState> {
+macro_rules! device_file {
+    ($self:ident, $field:ident, $subpath:literal, $write:literal) => {
+        $self.$field.get_or_try_init(|| {
+            OpenOptions::new()
+                .read(true)
+                .write($write)
+                .open($self.path.join($subpath))
+        })
+    };
+}
+
+macro_rules! impl_brightness {
+    ($struct:path) => {
+        impl Brightness for $struct {
+            fn brightness(&self) -> ReadNumResult<u32> {
+                let mut file = device_file!(self, file_brightness, "brightness", true)?;
+                let mut buf = String::new();
+                file.read_to_string(&mut buf)?;
+                Ok(buf.trim().parse()?)
+            }
+
+            fn set_brightness(&self, value: u32) -> WriteResult {
+                let mut file = device_file!(self, file_brightness, "brightness", true)?;
+                file.write_fmt(format_args!("{}", value))?;
+                file.flush()
+            }
+
+            fn max_brightness(&self) -> ReadNumResult<u32> {
+                self.max_brightness
+                    .get_or_try_init(|| {
+                        let mut file = File::open(self.path.join("max_brightness"))?;
+                        let mut buf = String::new();
+                        file.read_to_string(&mut buf)?;
+                        Ok(buf.trim().parse()?)
+                    })
+                    .copied()
+            }
+        }
+    };
+}
+
+impl_brightness!(LedDevice);
+impl_brightness!(BacklightDevice);
+
+impl Backlight for BacklightDevice {
+    fn bl_power(&self) -> std::io::Result<PowerState> {
         let mut file = device_file!(self, file_bl_power, "bl_power", true)?;
         let mut buf = [0_u8];
         file.read_exact(&mut buf)?;
@@ -76,44 +148,20 @@ impl BacklightDevice {
         }
     }
 
-    pub fn set_bl_power(&self, value: PowerState) -> WriteResult {
+    fn set_bl_power(&self, value: PowerState) -> WriteResult {
         let mut file = device_file!(self, file_bl_power, "bl_power", true)?;
         file.write_fmt(format_args!("{}", value as u8))?;
         file.flush()
     }
 
-    pub fn brightness(&self) -> ReadNumResult<u32> {
-        let mut file = device_file!(self, file_brightness, "brightness", true)?;
-        let mut buf = String::new();
-        file.read_to_string(&mut buf)?;
-        Ok(buf.trim().parse()?)
-    }
-
-    pub fn set_brightness(&self, value: u32) -> WriteResult {
-        let mut file = device_file!(self, file_brightness, "brightness", true)?;
-        file.write_fmt(format_args!("{}", value))?;
-        file.flush()
-    }
-
-    pub fn actual_brightness(&self) -> ReadNumResult<u32> {
+    fn actual_brightness(&self) -> ReadNumResult<u32> {
         let mut file = device_file!(self, file_actual_brightness, "brightness", false)?;
         let mut buf = String::new();
         file.read_to_string(&mut buf)?;
         Ok(buf.trim().parse()?)
     }
 
-    pub fn max_brightness(&self) -> ReadNumResult<u32> {
-        self.max_brightness
-            .get_or_try_init(|| {
-                let mut file = File::open(self.path.join("max_brightness"))?;
-                let mut buf = String::new();
-                file.read_to_string(&mut buf)?;
-                Ok(buf.trim().parse()?)
-            })
-            .copied()
-    }
-
-    pub fn device_type(&self) -> std::io::Result<DeviceType> {
+    fn device_type(&self) -> std::io::Result<DeviceType> {
         self.device_type
             .get_or_try_init(|| {
                 let mut file = File::open(self.path.join("type"))?;
