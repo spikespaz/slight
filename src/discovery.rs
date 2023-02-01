@@ -37,11 +37,11 @@ impl CapabilityCheckError {
     }
 
     fn permission_denied(path: &Path) -> Self {
-        Self::NotFound(path.to_string_lossy().to_string())
+        Self::PermissionDenied(path.to_string_lossy().to_string())
     }
 
     fn not_a_directory(path: &Path) -> Self {
-        Self::NotFound(path.to_string_lossy().to_string())
+        Self::NotADirectory(path.to_string_lossy().to_string())
     }
 }
 
