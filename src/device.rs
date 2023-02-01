@@ -1,5 +1,5 @@
 use std::fs::{File, OpenOptions};
-use std::io::{Read, Write};
+use std::io::{Read, Seek, Write};
 use std::path::PathBuf;
 
 use derive_more::Display;
@@ -110,12 +110,14 @@ macro_rules! impl_brightness {
                 let mut file = device_file!(self, file_brightness, "brightness", true)?;
                 let mut buf = String::new();
                 file.read_to_string(&mut buf)?;
+                file.rewind()?;
                 Ok(buf.trim().parse()?)
             }
 
             fn set_brightness(&self, value: u32) -> WriteResult {
                 let mut file = device_file!(self, file_brightness, "brightness", true)?;
                 file.write_fmt(format_args!("{}", value))?;
+                file.rewind()?;
                 file.flush()
             }
 
@@ -151,6 +153,7 @@ impl Backlight for BacklightDevice {
     fn set_bl_power(&self, value: PowerState) -> WriteResult {
         let mut file = device_file!(self, file_bl_power, "bl_power", true)?;
         file.write_fmt(format_args!("{}", value as u8))?;
+        file.rewind()?;
         file.flush()
     }
 
@@ -158,6 +161,7 @@ impl Backlight for BacklightDevice {
         let mut file = device_file!(self, file_actual_brightness, "brightness", false)?;
         let mut buf = String::new();
         file.read_to_string(&mut buf)?;
+        file.rewind()?;
         Ok(buf.trim().parse()?)
     }
 
