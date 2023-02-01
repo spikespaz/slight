@@ -51,20 +51,28 @@ fn main() {
         Set(ActionSet { value, duration }) => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
-            let target = value_to_absolute(value, &device);
-            device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
+            let value = value_to_absolute(value, &device);
+            set_brightness(value, &device, duration);
         }
         Increase(ActionIncrease { amount, duration }) => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
-            let delta = Delta::Increase(value_to_absolute(amount, &device));
-            change_brightness(delta, &device, duration);
+            let delta = value_to_absolute(amount, &device);
+            let value = device
+                .brightness()
+                .expect(FAIL_R_BRIGHTNESS)
+                .saturating_add(delta);
+            set_brightness(value, &device, duration);
         }
         Decrease(ActionDecrease { amount, duration }) => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
-            let delta = Delta::Decrease(value_to_absolute(amount, &device));
-            change_brightness(delta, &device, duration);
+            let delta = value_to_absolute(amount, &device);
+            let value = device
+                .brightness()
+                .expect(FAIL_R_BRIGHTNESS)
+                .saturating_sub(delta);
+            set_brightness(value, &device, duration);
         }
     };
 }
@@ -89,41 +97,34 @@ fn value_to_absolute(value: Value, device: &dyn Brightness) -> u32 {
     }
 }
 
-pub enum Delta {
-    Increase(u32),
-    Decrease(u32),
-}
-
-fn change_brightness(delta: Delta, device: &dyn Brightness, duration: Option<Duration>) {
+fn set_brightness(value: u32, device: &dyn Brightness, duration: Option<Duration>) {
     let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
-    let actual = device.brightness().expect(FAIL_R_ACTUAL_BRIGHTNESS);
+    let actual = device.brightness().expect(FAIL_R_BRIGHTNESS);
+    let target = std::cmp::min(value, max);
 
-    match delta {
-        Delta::Increase(delta) => {
-            let target = std::cmp::min(actual + delta, max);
-            if let Some(duration) = duration {
-                for i in (actual + 1)..=target {
-                    device.set_brightness(i).expect(FAIL_W_BRIGHTNESS);
-                    if i != target {
-                        std::thread::sleep(duration / delta);
-                    }
+    use std::cmp::Ordering;
+    match (target.cmp(&actual), duration) {
+        (Ordering::Greater, Some(duration)) => {
+            let interval = duration / (value - actual);
+            for i in (actual + 1)..=target {
+                device.set_brightness(i).expect(FAIL_W_BRIGHTNESS);
+                if i != target {
+                    std::thread::sleep(interval);
                 }
-            } else {
-                device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
             }
         }
-        Delta::Decrease(delta) => {
-            let target = actual.saturating_sub(delta);
-            if let Some(duration) = duration {
-                for i in (target..actual).rev() {
-                    device.set_brightness(i).expect(FAIL_W_BRIGHTNESS);
-                    if i != target {
-                        std::thread::sleep(duration / delta);
-                    }
+        (Ordering::Less, Some(duration)) => {
+            let interval = duration / (actual - value);
+            for i in (target..actual).rev() {
+                device.set_brightness(i).expect(FAIL_W_BRIGHTNESS);
+                if i != target {
+                    std::thread::sleep(interval);
                 }
-            } else {
-                device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
             }
         }
-    };
+        (Ordering::Greater | Ordering::Less, None) => {
+            device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
+        }
+        (Ordering::Equal, _) => {}
+    }
 }
