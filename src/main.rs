@@ -53,14 +53,14 @@ fn main() {
         Increase(ActionIncrease { amount, duration }) => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
-            let delta = value_to_absolute(amount, &device) as i32;
+            let delta = Delta::Increase(value_to_absolute(amount, &device));
             change_brightness(delta, &device, duration);
         }
         Decrease(ActionDecrease { amount, duration }) => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
-            let delta = value_to_absolute(amount, &device) as i32;
-            change_brightness(-delta, &device, duration);
+            let delta = Delta::Decrease(value_to_absolute(amount, &device));
+            change_brightness(delta, &device, duration);
         }
     };
 }
@@ -85,11 +85,23 @@ fn value_to_absolute(value: Value, device: &dyn Brightness) -> u32 {
     }
 }
 
-fn change_brightness(amount: i32, device: &dyn Brightness, duration: Option<Duration>) {
+pub enum Delta {
+    Increase(u32),
+    Decrease(u32),
+}
+
+fn change_brightness(delta: Delta, device: &dyn Brightness, duration: Option<Duration>) {
     let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
     let actual = device.brightness().expect(FAIL_R_ACTUAL_BRIGHTNESS);
-    let value = (actual as i32 + amount).clamp(0, max as i32);
-    device
-        .set_brightness(value as u32)
-        .expect("failed to write brightness");
+
+    match delta {
+        Delta::Increase(delta) => {
+            let target = std::cmp::min(actual + delta, max);
+            device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
+        }
+        Delta::Decrease(delta) => {
+            let target = actual.saturating_sub(delta);
+            device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
+        }
+    };
 }
