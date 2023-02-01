@@ -11,6 +11,7 @@ use crate::cli::{ActionList, SlightCommand, Value};
 use crate::device::{Backlight, BacklightDevice, Brightness, LedDevice};
 use crate::discovery::{Capability, CapabilityCheckError, DeviceDetail};
 
+const FAIL_FIND_DEFAULT_DEVICE: &str = "failed to find a default device";
 const FAIL_R_MAX_BRIGHTNESS: &str = "failed to read max_brightness";
 const FAIL_W_BRIGHTNESS: &str = "failed to write brightness";
 const FAIL_R_BRIGHTNESS: &str = "failed to read brightness";
@@ -26,7 +27,7 @@ fn main() {
     fn default_device(found: Lazy<Vec<DeviceDetail>>) -> DeviceDetail {
         Lazy::force(&found);
         let defaults = Lazy::into_value(found).unwrap();
-        defaults.into_iter().next().expect("no default device")
+        defaults.into_iter().next().expect(FAIL_FIND_DEFAULT_DEVICE)
     }
 
     let verbose = args.verbose;
