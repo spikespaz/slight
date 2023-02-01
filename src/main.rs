@@ -111,23 +111,24 @@ fn set_brightness(value: u32, device: &dyn Brightness, interval: Option<Duration
     let actual = device.brightness().expect(FAIL_R_BRIGHTNESS);
     let target = std::cmp::min(value, max);
 
+    macro_rules! step_brightness {
+        ($range:expr, $interval:expr) => {
+            for value in $range {
+                device.set_brightness(value).expect(FAIL_W_BRIGHTNESS);
+                if value != target {
+                    std::thread::sleep($interval);
+                }
+            }
+        };
+    }
+
     use std::cmp::Ordering;
     match (target.cmp(&actual), interval) {
         (Ordering::Greater, Some(interval)) => {
-            for i in (actual + 1)..=target {
-                device.set_brightness(i).expect(FAIL_W_BRIGHTNESS);
-                if value != target {
-                    std::thread::sleep(interval);
-                }
-            }
+            step_brightness!((actual + 1)..=target, interval);
         }
         (Ordering::Less, Some(interval)) => {
-            for i in (target..actual).rev() {
-                device.set_brightness(i).expect(FAIL_W_BRIGHTNESS);
-                if value != target {
-                    std::thread::sleep(interval);
-                }
-            }
+            step_brightness!((target..actual).rev(), interval);
         }
         (Ordering::Greater | Ordering::Less, None) => {
             device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
