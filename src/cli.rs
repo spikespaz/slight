@@ -42,7 +42,11 @@ pub enum Action {
 /// list all discovered backlight devices
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "list")]
-pub struct ActionList {}
+pub struct ActionList {
+    /// list devices as full paths (not names)
+    #[argh(switch, short = 'P')]
+    pub paths: bool,
+}
 
 /// get the current brightness value
 #[derive(FromArgs, PartialEq, Debug)]

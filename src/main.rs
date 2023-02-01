@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use once_cell::unsync::Lazy;
 
-use crate::cli::{SlightCommand, Value};
+use crate::cli::{ActionList, SlightCommand, Value};
 use crate::device::{Backlight, BacklightDevice, Brightness, LedDevice};
 use crate::discovery::{Capability, CapabilityCheckError, DeviceDetail};
 
@@ -34,8 +34,14 @@ fn main() {
     use cli::{Action::*, ActionDecrease, ActionGet, ActionIncrease, ActionSet};
 
     match args.command {
-        List(_) => {
-            dbg!(found_devices);
+        List(ActionList { paths }) => {
+            for device in found_devices.iter() {
+                if paths {
+                    println!("{}", device.path.display());
+                } else {
+                    println!("{}", device.name);
+                }
+            }
         }
         Get(ActionGet { percent }) => {}
         Set(ActionSet { value, duration }) => {
