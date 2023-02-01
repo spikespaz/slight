@@ -99,8 +99,10 @@ fn change_brightness(delta: Delta, device: &dyn Brightness, duration: Option<Dur
             let target = std::cmp::min(actual + delta, max);
             if let Some(duration) = duration {
                 for i in (actual + 1)..=target {
-                    std::thread::sleep(duration / delta);
                     device.set_brightness(i).expect(FAIL_W_BRIGHTNESS);
+                    if i != target {
+                        std::thread::sleep(duration / delta);
+                    }
                 }
             } else {
                 device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
@@ -109,11 +111,11 @@ fn change_brightness(delta: Delta, device: &dyn Brightness, duration: Option<Dur
         Delta::Decrease(delta) => {
             let target = actual.saturating_sub(delta);
             if let Some(duration) = duration {
-                println!("{duration:?} {actual} {target}");
-                for i in (target..=actual).rev() {
-                    println!("{i}");
-                    std::thread::sleep(duration / delta);
+                for i in (target..actual).rev() {
                     device.set_brightness(i).expect(FAIL_W_BRIGHTNESS);
+                    if i != target {
+                        std::thread::sleep(duration / delta);
+                    }
                 }
             } else {
                 device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
