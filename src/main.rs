@@ -60,7 +60,8 @@ fn main() {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
             let value = value_to_absolute(value, &device);
-            set_brightness(value, &device, duration);
+            let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
+            set_brightness(value, &device, duration.map(|d| d / max));
         }
         Increase(ActionIncrease { amount, duration }) => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
@@ -70,7 +71,7 @@ fn main() {
                 .brightness()
                 .expect(FAIL_R_BRIGHTNESS)
                 .saturating_add(delta);
-            set_brightness(value, &device, duration);
+            set_brightness(value, &device, duration.map(|d| d / delta));
         }
         Decrease(ActionDecrease { amount, duration }) => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
@@ -80,7 +81,7 @@ fn main() {
                 .brightness()
                 .expect(FAIL_R_BRIGHTNESS)
                 .saturating_sub(delta);
-            set_brightness(value, &device, duration);
+            set_brightness(value, &device, duration.map(|d| d / delta));
         }
     };
 }
@@ -105,27 +106,25 @@ fn value_to_absolute(value: Value, device: &dyn Brightness) -> u32 {
     }
 }
 
-fn set_brightness(value: u32, device: &dyn Brightness, duration: Option<Duration>) {
+fn set_brightness(value: u32, device: &dyn Brightness, interval: Option<Duration>) {
     let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
     let actual = device.brightness().expect(FAIL_R_BRIGHTNESS);
     let target = std::cmp::min(value, max);
 
     use std::cmp::Ordering;
-    match (target.cmp(&actual), duration) {
-        (Ordering::Greater, Some(duration)) => {
-            let interval = duration / (value - actual);
+    match (target.cmp(&actual), interval) {
+        (Ordering::Greater, Some(interval)) => {
             for i in (actual + 1)..=target {
                 device.set_brightness(i).expect(FAIL_W_BRIGHTNESS);
-                if i != target {
+                if value != target {
                     std::thread::sleep(interval);
                 }
             }
         }
-        (Ordering::Less, Some(duration)) => {
-            let interval = duration / (actual - value);
+        (Ordering::Less, Some(interval)) => {
             for i in (target..actual).rev() {
                 device.set_brightness(i).expect(FAIL_W_BRIGHTNESS);
-                if i != target {
+                if value != target {
                     std::thread::sleep(interval);
                 }
             }
