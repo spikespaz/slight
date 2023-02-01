@@ -43,7 +43,11 @@ fn main() {
                 }
             }
         }
-        Get(ActionGet { percent }) => {}
+        Get(ActionGet { percent }) => {
+            let device = args.device.unwrap_or(default_device(found_devices).path);
+            let device = LedDevice::new(device);
+            println!("{}", device.brightness().expect(FAIL_R_BRIGHTNESS));
+        }
         Set(ActionSet { value, duration }) => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
