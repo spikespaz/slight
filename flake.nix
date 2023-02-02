@@ -11,7 +11,7 @@
     system = "x86_64-linux";
     pkgs = nixpkgs.legacyPackages.${system};
   in {
-    overlays.${system} = {
+    overlays = {
       default = _: prev: {
         slight = prev.callPackage ({
           lib,
@@ -30,7 +30,7 @@
 
     packages.${system} = {
       default = self.packages.${system}.slight;
-      slight = (self.overlays.${system}.default null pkgs).slight;
+      slight = (self.overlays.default null pkgs).slight;
     };
   };
 }
