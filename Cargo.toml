@@ -1,7 +1,11 @@
 [package]
 name = "slight"
+description = "Backlight and LED devices control for Linux."
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+keywords = ["backlight", "brightness"]
+categories = ["command-line-utilities"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
