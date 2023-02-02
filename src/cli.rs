@@ -67,6 +67,12 @@ pub struct ActionSet {
     /// percentage or value to set
     #[argh(positional)]
     pub value: Value,
+    /// only increase, never decrease
+    #[argh(switch, short = 'I')]
+    pub increase: bool,
+    /// only decrease, never increase
+    #[argh(switch, short = 'D')]
+    pub decrease: bool,
     // /// percentage curve function
     // #[argh(option)]
     // pub curve: Option<String>,

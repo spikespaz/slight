@@ -16,6 +16,10 @@ const FAIL_R_MAX_BRIGHTNESS: &str = "failed to read max_brightness";
 const FAIL_W_BRIGHTNESS: &str = "failed to write brightness";
 const FAIL_R_BRIGHTNESS: &str = "failed to read brightness";
 const FAIL_R_ACTUAL_BRIGHTNESS: &str = "failed to read actual_brightness";
+const CONFLICT_INCREASE_DECREASE: &str =
+    "cannot specify increase (-I) and decrease (-D) at the same time";
+const CURRENT_BRIGHTNESS_GREATER: &str = "current brightness is greater than target, doing nothing";
+const CURRENT_BRIGHTNESS_LESS: &str = "current brightness is less than target, doing nothing";
 
 const DEFAULT_DEVICE_PATHS: &[&str; 2] = &["/sys/class/backlight", "/sys/class/leds"];
 
@@ -56,12 +60,30 @@ fn main() {
                 println!("{actual}");
             }
         }
-        Set(ActionSet { value, duration }) => {
+        Set(ActionSet {
+            value,
+            increase,
+            decrease,
+            duration,
+        }) => {
+            if increase && decrease {
+                panic!("{CONFLICT_INCREASE_DECREASE}");
+            }
+
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
+            let current = device.brightness().expect(FAIL_R_BRIGHTNESS);
             let value = value_to_absolute(value, &device);
-            let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
-            set_brightness(value, &device, duration.map(|d| d / max));
+
+            if value == current {
+            } else if increase && value < current {
+                println!("{CURRENT_BRIGHTNESS_GREATER}");
+            } else if decrease && value > current {
+                println!("{CURRENT_BRIGHTNESS_LESS}");
+            } else {
+                let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
+                set_brightness(value, &device, duration.map(|d| d / max));
+            }
         }
         Increase(ActionIncrease { amount, duration }) => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
