@@ -16,6 +16,7 @@
         slight = prev.callPackage ({
           lib,
           rustPlatform,
+          coreutils,
         }:
           rustPlatform.buildRustPackage (let
             manifest = lib.importTOML ./Cargo.toml;
@@ -24,6 +25,16 @@
             version = manifest.package.version;
             src = ./.;
             cargoHash = "sha256-frbnF/TBFau1QMOlmC1GKsM2uCBG3SdFuIscuiCqdHc=";
+
+            postPatch = ''
+              substituteInPlace 90-backlight.rules \
+                --replace '/bin/chgrp' '${coreutils}/bin/chgrp' \
+                --replace '/bin/chmod' '${coreutils}/bin/chmod'
+            '';
+
+            postInstall = ''
+              install -Dm444 90-backlight.rules -t $out/etc/udev/rules.d
+            '';
           })) {};
       };
     };

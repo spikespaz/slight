@@ -39,7 +39,39 @@ Assuming you have Rust installed, with `$HOME/.cargo/bin` added to your environm
 $ cargo install slight
 ```
 
+> **Note:**
+>
+> The binary will need to be run with `sudo` unless you install the requisite
+> `udev` rules. These can be found in `backlight-90.rules` in the root of the repository.
+>
+> Your user must also be added to the `video` group to satisfy these rules.
+>
+> Copy `backlight-90.rules` to `/etc/udev/rules.d`, and add your user to the `video` group.
+
+```sh
+$ curl https://raw.githubusercontent.com/spikespaz/slight/master/90-backlight.rules -o 90-backlight.rules
+$ sudo install -Dm444 90-backlight.rules -t /etc/udev/rules.d
+$ sudo usermod -aG video $USER
+```
+
 ### NixOS
+
+> **Note:**
+>
+> Don't forget to install the `udev` rules!
+>
+> This can be done via the NixOS option `services.udev.extraRules` or
+> `services.udev.packages`.
+>
+> For example, in your system configuration:
+>
+> ```nix
+> {
+>   environment.systemPackages = [pkgs.slight];
+>   services.udev.packages = [pkgs.slight];
+>   users.users.YOURNAME.extraGroups = ["video"];
+> }
+> ```
 
 #### With Flakes
 
@@ -53,14 +85,14 @@ Below is an example showing how to use the overlay, so that you can use the pack
     slight.url = "github:spikespaz/slight";
     slight.follows = "nixpkgs";
   };
-  
+
   outputs = inputs @ {
     self,
     nixpkgs,
     ...
   }: let
     system = "x86_64-linux";
-  
+
     pkgs = import nixpkgs {
       inherit system;
       overlays = [
