@@ -24,7 +24,7 @@
             pname = manifest.package.name;
             version = manifest.package.version;
             src = ./.;
-            cargoHash = "sha256-frbnF/TBFau1QMOlmC1GKsM2uCBG3SdFuIscuiCqdHc=";
+            cargoLock.lockFile = ./Cargo.lock;
 
             postPatch = ''
               substituteInPlace 90-backlight.rules \
