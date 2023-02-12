@@ -12,8 +12,8 @@
     pkgs = nixpkgs.legacyPackages.${system};
   in {
     overlays = {
-      default = _: prev: {
-        slight = prev.callPackage ({
+      default = final: _: {
+        slight = final.callPackage ({
           lib,
           rustPlatform,
           coreutils,
