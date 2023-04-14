@@ -71,5 +71,16 @@
       default = self.packages.${system}.slight;
       slight = (self.overlays.default pkgs null).slight;
     });
+
+    homeManagerModules = {
+      gammastep-hook = import ./nix/hm-modules/gammastep-hook.nix {
+        inherit self;
+        programName = "gammastep";
+      };
+      redshift-hook = import ./nix/hm-modules/gammastep-hook.nix {
+        inherit self;
+        programName = "redshift";
+      };
+    };
   };
 }
