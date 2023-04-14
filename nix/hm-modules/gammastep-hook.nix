@@ -12,7 +12,7 @@
 }: let
   inherit (lib) types;
   cfg = config.services.${programName}.slight.brightnessHook;
-  flakePackages = (lib.traceVal self.packages).${pkgs.stdenv.hostPlatform.system};
+  flakePackages = self.packages.${pkgs.stdenv.hostPlatform.system};
 in {
   options = let
     mkBrightnessOption = default: period:
