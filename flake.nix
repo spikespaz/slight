@@ -67,9 +67,9 @@
       };
     };
 
-    packages = mapSystems (pkgs: system: {
+    packages = mapSystems (system: pkgs: {
       default = self.packages.${system}.slight;
-      slight = (self.overlays.default null pkgs).slight;
+      slight = (self.overlays.default pkgs null).slight;
     });
   };
 }
