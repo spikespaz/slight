@@ -1,15 +1,10 @@
-{
-  self,
-  # Will be used in the path of the script in `~/.config`,
-  # as the name of the script in `/nix/store`, and as part of the path
-  # to the options. See `cfg` below.
-  programName,
-}: {
-  config,
-  pkgs,
-  lib,
-  ...
-}: let
+{ self,
+# Will be used in the path of the script in `~/.config`,
+# as the name of the script in `/nix/store`, and as part of the path
+# to the options. See `cfg` below.
+programName, }:
+{ config, pkgs, lib, ... }:
+let
   inherit (lib) types;
   cfg = config.services.${programName}.slight.brightnessHook;
   flakePackages = self.packages.${pkgs.stdenv.hostPlatform.system};
@@ -25,7 +20,7 @@ in {
       };
     mkDurationOption = default: fromPeriod: toPeriod:
       lib.mkOption {
-        type = types.strMatching ''[0-9]+(ms|ds|s|m)'';
+        type = types.strMatching "^[0-9]+(ms|ds|s|m)$";
         inherit default;
         description = lib.mdDoc ''
           The duration of time over which to inperpolate a change in brightness
@@ -35,14 +30,18 @@ in {
   in {
     services.${programName}.slight.brightnessHook = {
       enable = lib.mkEnableOption "${programName} brightness hook for slight";
-      slightPackage = lib.mkPackageOption flakePackages "slight" {};
+      slightPackage = lib.mkPackageOption flakePackages "slight" { };
       brightness.day = mkBrightnessOption 85 "day";
       brightness.transition = mkBrightnessOption 55 "transition period";
       brightness.night = mkBrightnessOption 25 "night";
-      interpDur.dayFromTransition = mkDurationOption "5s" "transition period" "day";
-      interpDur.transitionFromDay = mkDurationOption "5s" "day" "transition period";
-      interpDur.nightFromTransition = mkDurationOption "10s" "transition period" "night";
-      interpDur.transitionFromNight = mkDurationOption "20s" "night" "transition period";
+      interpDur.dayFromTransition =
+        mkDurationOption "5s" "transition period" "day";
+      interpDur.transitionFromDay =
+        mkDurationOption "5s" "day" "transition period";
+      interpDur.nightFromTransition =
+        mkDurationOption "10s" "transition period" "night";
+      interpDur.transitionFromNight =
+        mkDurationOption "20s" "night" "transition period";
     };
   };
   config = let
@@ -102,13 +101,12 @@ in {
         esac
       fi
     '');
-  in
-    lib.mkIf cfg.enable {
-      # Gammastep and redshift use the same path, and have the same hook API.
-      xdg.configFile."${programName}/hooks/brightness.sh" = {
-        executable = true;
-        # <https://wiki.archlinux.org/title/redshift#Use_real_screen_brightness>
-        source = hookScript.outPath;
-      };
+  in lib.mkIf cfg.enable {
+    # Gammastep and redshift use the same path, and have the same hook API.
+    xdg.configFile."${programName}/hooks/brightness.sh" = {
+      executable = true;
+      # <https://wiki.archlinux.org/title/redshift#Use_real_screen_brightness>
+      source = hookScript.outPath;
     };
+  };
 }
