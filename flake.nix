@@ -2,19 +2,20 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     systems.url = "github:nix-systems/default-linux";
+    birdos.url = "github:spikespaz/dotfiles";
     nixfmt.url = "github:serokell/nixfmt";
   };
 
-  outputs = inputs@{ self, nixpkgs, systems, nixfmt, ... }:
+  outputs = inputs@{ self, nixpkgs, birdos, systems, nixfmt, ... }:
     let
-      inherit (nixpkgs) lib;
+      inherit (birdos) lib;
       eachSystem = lib.genAttrs (import systems);
       pkgsFor = eachSystem (system: import nixpkgs { localSystem = system; });
     in {
       overlays = {
         default = final: _: {
           slight =
-            final.callPackage (import ./nix/default.nix self.outPath) { };
+            final.callPackage (import ./nix/default.nix self.outPath) { inherit lib; };
         };
       };
 
