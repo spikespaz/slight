@@ -13,25 +13,8 @@
     in {
       overlays = {
         default = final: _: {
-          slight = final.callPackage ({ lib, rustPlatform, coreutils, }:
-            rustPlatform.buildRustPackage
-            (let manifest = lib.importTOML ./Cargo.toml;
-            in {
-              pname = manifest.package.name;
-              version = manifest.package.version;
-              src = ./.;
-              cargoLock.lockFile = ./Cargo.lock;
-
-              postPatch = ''
-                substituteInPlace 90-backlight.rules \
-                  --replace '/bin/chgrp' '${coreutils}/bin/chgrp' \
-                  --replace '/bin/chmod' '${coreutils}/bin/chmod'
-              '';
-
-              postInstall = ''
-                install -Dm444 90-backlight.rules -t $out/etc/udev/rules.d
-              '';
-            })) { };
+          slight =
+            final.callPackage (import ./nix/default.nix self.outPath) { };
         };
       };
 
