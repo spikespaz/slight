@@ -1,3 +1,6 @@
+# Cargo
 /target
-
-.vscode/
+# Editors
+/.vscode
+# Nix
+/result
