@@ -1,35 +1,14 @@
 {
-  inputs = { nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable"; };
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    systems.url = "github:nix-systems/default-linux";
+  };
 
-  outputs = inputs@{ self, nixpkgs, ... }:
+  outputs = inputs@{ self, nixpkgs, systems, ... }:
     let
       inherit (nixpkgs) lib;
-      systems = [
-        # Tier 1
-        "x86_64-linux"
-        # Tier 2
-        "aarch64-linux"
-        # "x86_64-darwin"
-        # Tier 3
-        "armv6l-linux"
-        "armv7l-linux"
-        "i686-linux"
-        "mipsel-linux"
-
-        # Other platforms with sufficient support in stdenv which is not formally
-        # mandated by their platform tier.
-        # "aarch64-darwin"
-        "armv5tel-linux"
-        "powerpc64le-linux"
-        "riscv64-linux"
-
-        # "x86_64-freebsd" is excluded because it is mostly broken
-      ];
-      pkgsFor = builtins.listToAttrs (map (system: {
-        name = system;
-        value = nixpkgs.legacyPackages.${system};
-      }) systems);
-      mapSystems = fn: builtins.mapAttrs fn pkgsFor;
+      eachSystem = lib.genAttrs (import systems);
+      pkgsFor = eachSystem (system: import nixpkgs { localSystem = system; });
     in {
       overlays = {
         default = final: _: {
@@ -55,9 +34,9 @@
         };
       };
 
-      packages = mapSystems (system: pkgs: {
+      packages = eachSystem (system: {
         default = self.packages.${system}.slight;
-        slight = (self.overlays.default pkgs null).slight;
+        slight = (self.overlays.default pkgsFor.${system} null).slight;
       });
 
       homeManagerModules = {
