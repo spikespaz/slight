@@ -1,10 +1,11 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     systems.url = "github:nix-systems/default-linux";
+    nixfmt.url = "github:serokell/nixfmt";
   };
 
-  outputs = inputs@{ self, nixpkgs, systems, ... }:
+  outputs = inputs@{ self, nixpkgs, systems, nixfmt, ... }:
     let
       inherit (nixpkgs) lib;
       eachSystem = lib.genAttrs (import systems);
@@ -49,5 +50,7 @@
           programName = "redshift";
         };
       };
+
+      formatter = eachSystem (system: nixfmt.packages.${system}.default);
     };
 }
