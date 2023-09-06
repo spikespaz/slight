@@ -4,7 +4,13 @@ let manifest = lib.importTOML "${sourceRoot}/Cargo.toml";
 in rustPlatform.buildRustPackage {
   pname = manifest.package.name;
   version = manifest.package.version;
-  src = sourceRoot;
+  src = lib.cleanSourceWith {
+    src = sourceRoot;
+    filter = lib.mkSourceFilter sourceRoot [
+      lib.defaultSourceFilter
+      lib.rustSourceFilter
+    ];
+  };
   cargoLock.lockFile = "${sourceRoot}/Cargo.lock";
 
   postPatch = ''
