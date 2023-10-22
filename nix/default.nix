@@ -1,5 +1,10 @@
-sourceRoot:
-{ lib, rustPlatform, coreutils, }:
+{
+# Must be provided in `callPackage` for accuracy.
+sourceRoot ? ./.., platforms ? [ "x86_64-linux" ],
+#
+lib, rustPlatform, coreutils
+#
+}:
 let manifest = lib.importTOML "${sourceRoot}/Cargo.toml";
 in rustPlatform.buildRustPackage {
   pname = manifest.package.name;
@@ -22,4 +27,12 @@ in rustPlatform.buildRustPackage {
   postInstall = ''
     install -Dm444 90-backlight.rules -t $out/etc/udev/rules.d
   '';
+
+  meta = {
+    inherit (manifest.package) description homepage;
+    license = lib.licenses.mit;
+    maintainers = [ lib.maintainers.spikespaz ];
+    inherit platforms;
+    mainProgram = manifest.package.name;
+  };
 }

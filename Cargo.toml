@@ -1,6 +1,7 @@
 [package]
 name = "slight"
 description = "Backlight and LED devices control for Linux."
+homepage = "https://github.com/spikespaz/slight"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"

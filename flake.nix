@@ -14,8 +14,11 @@
     in {
       overlays = {
         default = final: _: {
-          slight =
-            final.callPackage (import ./nix/default.nix self.outPath) { inherit lib; };
+          slight = final.callPackage (import ./nix/default.nix) {
+            sourceRoot = self.outPath;
+            platforms = import systems;
+            inherit lib;
+          };
         };
       };
 
