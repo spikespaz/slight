@@ -1,31 +1,38 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    systems.url = "github:nix-systems/default-linux";
-    bird-nix-lib.url = "github:spikespaz/bird-nix-lib";
-    nixfmt.url = "github:serokell/nixfmt";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    systems = {
+      url = "github:nix-systems/default";
+      flake = false;
+    };
   };
-
-  outputs = { self, nixpkgs, bird-nix-lib, systems, nixfmt }:
+  outputs = { self, nixpkgs, rust-overlay, systems }:
     let
-      lib = nixpkgs.lib.extend (bird-nix-lib.lib.overlay);
+      inherit (nixpkgs) lib;
       eachSystem = lib.genAttrs (import systems);
-      pkgsFor = eachSystem (system: import nixpkgs { localSystem = system; });
-    in {
-      overlays = {
-        default = final: _: {
-          slight = final.callPackage (import ./nix/default.nix) {
-            sourceRoot = self.outPath;
-            platforms = import systems;
-            inherit lib;
-          };
-        };
-      };
+      pkgsFor = eachSystem (system:
+        import nixpkgs {
+          localSystem = system;
+          overlays = [ self.overlays.default ];
+        });
 
-      packages = eachSystem (system: {
-        default = self.packages.${system}.slight;
-        slight = (self.overlays.default pkgsFor.${system} null).slight;
-      });
+      packageName = (lib.importTOML ./Cargo.toml).package.name;
+    in {
+      overlays =
+        import ./nix/overlays { inherit self lib rust-overlay packageName; };
+
+      packages = lib.mapAttrs (system: pkgs: {
+        default = self.packages.${system}.${packageName};
+        ${packageName} = pkgs.${packageName};
+      }) pkgsFor;
+
+      devShells = lib.mapAttrs (system: pkgs: {
+        default = pkgs.callPackage ./nix/shell.nix { inherit packageName; };
+      }) pkgsFor;
 
       homeManagerModules = {
         gammastep-hook = import ./nix/hm-modules/gammastep-hook.nix {
@@ -38,6 +45,7 @@
         };
       };
 
-      formatter = eachSystem (system: nixfmt.packages.${system}.default);
+      formatter =
+        eachSystem (system: nixpkgs.legacyPackages.${system}.nixfmt-classic);
     };
 }

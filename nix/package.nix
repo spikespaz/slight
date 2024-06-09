@@ -1,22 +1,12 @@
-{
-# Must be provided in `callPackage` for accuracy.
-sourceRoot ? ./.., platforms ? [ "x86_64-linux" ],
-#
-lib, rustPlatform, coreutils
-#
-}:
+{ sourceRoot ? ../., lib, rustPlatform, coreutils }:
 let manifest = lib.importTOML "${sourceRoot}/Cargo.toml";
 in rustPlatform.buildRustPackage {
   pname = manifest.package.name;
   version = manifest.package.version;
-  src = lib.cleanSourceWith {
-    src = sourceRoot;
-    filter = lib.mkSourceFilter sourceRoot [
-      lib.defaultSourceFilter
-      lib.rustSourceFilter
-    ];
-  };
+
+  src = lib.cleanSource sourceRoot;
   cargoLock.lockFile = "${sourceRoot}/Cargo.lock";
+  strictDeps = true;
 
   postPatch = ''
     substituteInPlace 90-backlight.rules \
@@ -30,9 +20,9 @@ in rustPlatform.buildRustPackage {
 
   meta = {
     inherit (manifest.package) description homepage;
-    license = lib.licenses.mit;
+    license = with lib.licenses; [ mit asl20 ];
     maintainers = [ lib.maintainers.spikespaz ];
-    inherit platforms;
+    platforms = lib.platforms.linux;
     mainProgram = manifest.package.name;
   };
 }
