@@ -82,7 +82,7 @@ fn main() {
                 println!("{CURRENT_BRIGHTNESS_LESS}");
             } else {
                 let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
-                set_brightness(value, &device, duration.map(|d| d / max));
+                set_brightness(value, &device, duration.map(|d| d.0 / max));
             }
         }
         Increase(ActionIncrease { amount, duration }) => {
@@ -93,7 +93,7 @@ fn main() {
                 .brightness()
                 .expect(FAIL_R_BRIGHTNESS)
                 .saturating_add(delta);
-            set_brightness(value, &device, duration.map(|d| d / delta));
+            set_brightness(value, &device, duration.map(|d| d.0 / delta));
         }
         Decrease(ActionDecrease { amount, duration }) => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
@@ -103,7 +103,7 @@ fn main() {
                 .brightness()
                 .expect(FAIL_R_BRIGHTNESS)
                 .saturating_sub(delta);
-            set_brightness(value, &device, duration.map(|d| d / delta));
+            set_brightness(value, &device, duration.map(|d| d.0 / delta));
         }
     };
 }

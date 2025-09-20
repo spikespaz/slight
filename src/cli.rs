@@ -1,4 +1,5 @@
 use std::num::ParseIntError;
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
@@ -77,8 +78,8 @@ pub struct ActionSet {
     // #[argh(option)]
     // pub curve: Option<String>,
     /// duration of time when interpolating between 0% and 100%
-    #[argh(option, short = 't', from_str_fn(duration_from_str))]
-    pub duration: Option<Duration>,
+    #[argh(option, short = 't')]
+    pub duration: Option<DurationInterval>,
 }
 
 /// increase the brightness value
@@ -92,8 +93,8 @@ pub struct ActionIncrease {
     // #[argh(option)]
     // pub curve: Option<String>,
     /// duration of time over which to interpolate the change
-    #[argh(option, short = 't', from_str_fn(duration_from_str))]
-    pub duration: Option<Duration>,
+    #[argh(option, short = 't')]
+    pub duration: Option<DurationInterval>,
 }
 
 /// decrease the brightness value
@@ -107,8 +108,8 @@ pub struct ActionDecrease {
     // #[argh(option)]
     // pub curve: Option<String>,
     /// duration of time over which to interpolate the change
-    #[argh(option, short = 't', from_str_fn(duration_from_str))]
-    pub duration: Option<Duration>,
+    #[argh(option, short = 't')]
+    pub duration: Option<DurationInterval>,
 }
 
 #[derive(PartialEq, Debug, Copy, Clone)]
@@ -133,36 +134,64 @@ impl FromStr for Value {
     }
 }
 
-// Just a function because it's tedious to properly wrap `Duration`
-// in a manner that `argh` will accept.
-pub fn duration_from_str(value: &str) -> Result<Duration, String> {
-    macro_rules! parse {
-        ($from_fun:path, $suf_len:literal) => {
-            Ok($from_fun(
-                value[0..value.len() - $suf_len]
-                    .parse()
-                    .map_err(|e| format!("{e}"))?,
-            )
-            .into())
+/// A wrapper of [`Duration`] that is non-zero and implements [`FromStr`].
+#[derive(Clone, Debug, PartialEq)]
+pub struct DurationInterval(pub Duration);
+
+impl TryFrom<Duration> for DurationInterval {
+    type Error = String;
+
+    fn try_from(value: Duration) -> Result<Self, Self::Error> {
+        if value.is_zero() {
+            Err("duration must be greater than zero".to_string())
+        } else {
+            Ok(Self(value))
+        }
+    }
+}
+
+impl Deref for DurationInterval {
+    type Target = Duration;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl FromStr for DurationInterval {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let value = value.trim();
+        parse_duration(value).and_then(Self::try_from)
+    }
+}
+
+fn parse_duration(value: &str) -> Result<Duration, String> {
+    if value.is_empty() {
+        return Err("duration must not be an empty string".to_string());
+    }
+
+    macro_rules! parse_with_suffix {
+        ($suffix:literal, $parse_ty:ty, $map:expr) => {
+            if value.ends_with($suffix) {
+                let number = &value[0..value.len() - $suffix.len()];
+                let number = number.parse::<$parse_ty>().map_err(|_| {
+                    format!("invalid number '{number}' before suffix '{}'", $suffix)
+                })?;
+                if number < 0 as $parse_ty {
+                    return Err("duration cannot be negative".to_string());
+                } else {
+                    return Ok($map(number));
+                }
+            }
         };
     }
-    fn from_decis(ds: f64) -> Duration {
-        Duration::from_secs_f64(ds / 10.0)
-    }
 
-    fn from_mins(m: f64) -> Duration {
-        Duration::from_secs_f64(m * 60.0)
-    }
+    parse_with_suffix!("ms", u64, Duration::from_millis);
+    parse_with_suffix!("ds", u64, |ds| Duration::from_millis(ds * 100));
+    parse_with_suffix!("s", f64, Duration::from_secs_f64);
+    parse_with_suffix!("m", f64, |m| Duration::from_secs_f64(m * 60.0));
 
-    if value.ends_with("ms") {
-        parse!(Duration::from_millis, 2)
-    } else if value.ends_with("ds") {
-        parse!(from_decis, 2)
-    } else if value.ends_with('s') {
-        parse!(Duration::from_secs_f64, 1)
-    } else if value.ends_with('m') {
-        parse!(from_mins, 1)
-    } else {
-        Err("unknown suffix".into())
-    }
+    Err("duration must have a suffix".to_string())
 }
