@@ -1,4 +1,4 @@
-use std::num::ParseIntError;
+use std::num::{ParseFloatError, ParseIntError};
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -163,24 +163,45 @@ impl FromStr for DurationInterval {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let value = value.trim();
-        parse_duration(value).and_then(Self::try_from)
+        parse_duration(value)
+            .map_err(|e| e.to_string())
+            .and_then(Self::try_from)
     }
 }
 
-fn parse_duration(value: &str) -> Result<Duration, String> {
+#[derive(Clone, Debug, PartialEq, thiserror::Error)]
+pub enum ParseDurationError {
+    #[error("duration is missing a value")]
+    MissingNumber,
+    #[error("durations cannot be negative")]
+    NegativeNumber,
+    #[error("duration is missing a suffix")]
+    MissingSuffix,
+    #[error("unknown suffix '{0}' for duration, must be one of: `ms`, `ds`, `s`, `m`")]
+    InvalidSuffix(String),
+    #[error("{0} for duration")]
+    ParseFloatError(#[from] ParseFloatError),
+    #[error("{0} for duration")]
+    ParseIntError(#[from] ParseIntError),
+}
+
+fn parse_duration(value: &str) -> Result<Duration, ParseDurationError> {
+    use ParseDurationError as E;
+
     if value.is_empty() {
-        return Err("duration must not be an empty string".to_string());
+        return Err(E::MissingNumber);
     }
 
     macro_rules! parse_with_suffix {
         ($suffix:literal, $parse_ty:ty, $map:expr) => {
             if value.ends_with($suffix) {
                 let number = &value[0..value.len() - $suffix.len()];
-                let number = number.parse::<$parse_ty>().map_err(|_| {
-                    format!("invalid number '{number}' before suffix '{}'", $suffix)
-                })?;
+                if number.is_empty() {
+                    return Err(E::MissingNumber);
+                }
+                let number = number.parse::<$parse_ty>()?;
                 if number < 0 as $parse_ty {
-                    return Err("duration cannot be negative".to_string());
+                    return Err(E::NegativeNumber);
                 } else {
                     return Ok($map(number));
                 }
@@ -193,5 +214,11 @@ fn parse_duration(value: &str) -> Result<Duration, String> {
     parse_with_suffix!("s", f64, Duration::from_secs_f64);
     parse_with_suffix!("m", f64, |m| Duration::from_secs_f64(m * 60.0));
 
-    Err("duration must have a suffix".to_string())
+    let number = value.trim_end_matches(|ch: char| !ch.is_numeric() && ch != '.');
+    let suffix = &value[number.len()..];
+    if suffix.is_empty() {
+        Err(E::MissingSuffix)
+    } else {
+        Err(E::InvalidSuffix(suffix.to_string()))
+    }
 }
