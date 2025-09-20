@@ -222,3 +222,35 @@ fn parse_duration(value: &str) -> Result<Duration, ParseDurationError> {
         Err(E::InvalidSuffix(suffix.to_string()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use test_case::{test_case, test_matrix};
+
+    use super::{parse_duration, ParseDurationError};
+
+    #[test_case("100ms" => Duration::from_millis(100))]
+    #[test_case("10ds" => Duration::from_secs_f64(1.0))]
+    #[test_case("1s" => Duration::from_secs(1))]
+    #[test_case("1m" => Duration::from_secs(60))]
+    #[test_case("1.0s" => Duration::from_secs_f64(1.0))]
+    #[test_case("1.0m" => Duration::from_secs_f64(60.0))]
+    fn test_parse_duration(input: &str) -> Duration {
+        parse_duration(input).unwrap()
+    }
+
+    #[test_matrix(["ms", "ds", "s", "m"] => ParseDurationError::MissingNumber)]
+    #[test_matrix(["-1.0s", "-1.0m"] => ParseDurationError::NegativeNumber)]
+    #[test_matrix(["1.0", "1"] => ParseDurationError::MissingSuffix)]
+    #[test_matrix(["1h", "h"] => ParseDurationError::InvalidSuffix("h".to_owned()))]
+    #[test_case("100.0ms" => ParseDurationError::ParseIntError("100.0".parse::<u64>().unwrap_err()))]
+    #[test_case("10.0ms" => ParseDurationError::ParseIntError("10.0".parse::<u64>().unwrap_err()))]
+    #[test_case("-100ms" => ParseDurationError::ParseIntError("-100".parse::<u64>().unwrap_err()))]
+    #[test_case("0x01s" => ParseDurationError::ParseFloatError("0x01".parse::<f64>().unwrap_err()))]
+    #[test_case("" => ParseDurationError::MissingNumber)]
+    fn test_parse_duration_error(input: &str) -> ParseDurationError {
+        parse_duration(input).unwrap_err()
+    }
+}
