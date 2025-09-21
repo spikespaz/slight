@@ -128,6 +128,24 @@ pub enum Value {
     Absolute(u32),
 }
 
+impl Value {
+    pub fn to_absolute(self, max: u32) -> u32 {
+        match self {
+            Value::Percent(pct) => (pct.clamp(0.0, 1.0) * max as f32).round() as u32,
+            Value::Absolute(abs) => abs,
+        }
+        .min(max)
+    }
+
+    pub fn saturating_add(lhs: u32, rhs: Self, max: u32) -> u32 {
+        lhs.saturating_add(rhs.to_absolute(max)).min(max)
+    }
+
+    pub fn saturating_sub(lhs: u32, rhs: Self, max: u32) -> u32 {
+        lhs.saturating_sub(rhs.to_absolute(max))
+    }
+}
+
 impl FromStr for Value {
     type Err = ParseValueError;
 
