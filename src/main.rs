@@ -72,8 +72,9 @@ fn main() {
 
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
+            let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
             let current = device.brightness().expect(FAIL_R_BRIGHTNESS);
-            let value = value_to_absolute(value, &device);
+            let value = value.to_absolute(max);
 
             if value == current {
             } else if increase && value < current {
@@ -81,29 +82,32 @@ fn main() {
             } else if decrease && value > current {
                 println!("{CURRENT_BRIGHTNESS_LESS}");
             } else {
-                let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
-                set_brightness(value, &device, duration.map(|d| d.0 / max));
+                set_brightness(value, &device, duration.map(|dur| dur.0 / max));
             }
         }
         Increase(ActionIncrease { amount, duration }) => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
-            let delta = value_to_absolute(amount, &device);
-            let value = device
-                .brightness()
-                .expect(FAIL_R_BRIGHTNESS)
-                .saturating_add(delta);
-            set_brightness(value, &device, duration.map(|d| d.0 / delta));
+            let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
+            let value = device.brightness().expect(FAIL_R_BRIGHTNESS);
+            let value = Value::saturating_add(value, amount, max);
+            set_brightness(
+                value,
+                &device,
+                duration.map(|dur| dur.0 / amount.to_absolute(max)),
+            );
         }
         Decrease(ActionDecrease { amount, duration }) => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
-            let delta = value_to_absolute(amount, &device);
-            let value = device
-                .brightness()
-                .expect(FAIL_R_BRIGHTNESS)
-                .saturating_sub(delta);
-            set_brightness(value, &device, duration.map(|d| d.0 / delta));
+            let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
+            let value = device.brightness().expect(FAIL_R_BRIGHTNESS);
+            let value = Value::saturating_sub(value, amount, max);
+            set_brightness(
+                value,
+                &device,
+                duration.map(|dur| dur.0 / amount.to_absolute(max)),
+            );
         }
     };
 }
@@ -116,16 +120,6 @@ fn find_devices() -> Vec<DeviceDetail> {
         .filter_map(Result::ok)
         .filter_map(|entry| DeviceDetail::try_from(entry.path()).ok())
         .collect()
-}
-
-fn value_to_absolute(value: Value, device: &dyn Brightness) -> u32 {
-    match value {
-        Value::Absolute(value) => value,
-        Value::Percent(percent) => {
-            let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
-            (percent * max as f32).round() as u32
-        }
-    }
 }
 
 fn set_brightness(value: u32, device: &dyn Brightness, interval: Option<Duration>) {
