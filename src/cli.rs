@@ -112,24 +112,43 @@ pub struct ActionDecrease {
     pub duration: Option<DurationInterval>,
 }
 
+#[derive(Clone, Debug, PartialEq, thiserror::Error)]
+pub enum ParseValueError {
+    #[error("percentage '{0}' must be between 0 and 100")]
+    PercentOutOfRange(u8),
+    #[error("{0} for percentage '{1}'")]
+    ParsePercentError(ParseIntError, String),
+    #[error("{0} for absolute value '{1}'")]
+    ParseAbsoluteError(ParseIntError, String),
+}
+
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum Value {
     Percent(f32),
     Absolute(u32),
 }
 
-// This is here because we get `FromArgValue` automatically
-// for types that implement `FromStr` where `FromStr::Err` is `Display`.
 impl FromStr for Value {
-    type Err = ParseIntError;
+    type Err = ParseValueError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
+        use ParseValueError as E;
+
+        let value = value.trim();
         if value.ends_with('%') {
-            Ok(Self::Percent(
-                value[0..value.len() - 1].parse::<u8>()? as f32 / 100.0,
-            ))
+            let value = value[0..value.len() - 1]
+                .parse::<u8>()
+                .map_err(|e| E::ParsePercentError(e, value.to_string()))?;
+            if !(0..=100).contains(&value) {
+                Err(E::PercentOutOfRange(value))
+            } else {
+                Ok(Self::Percent(value as f32 / 100.0))
+            }
         } else {
-            Ok(Self::Absolute(value.parse()?))
+            let value = value
+                .parse::<u32>()
+                .map_err(|e| E::ParseAbsoluteError(e, value.to_string()))?;
+            Ok(Self::Absolute(value))
         }
     }
 }
