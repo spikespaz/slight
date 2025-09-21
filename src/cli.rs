@@ -170,9 +170,15 @@ impl FromStr for DurationInterval {
     type Err = DurationIntervalError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        parse_duration(value.trim())
-            .map_err(Into::into)
-            .and_then(Self::try_from)
+        let value = value.trim();
+        match parse_duration(value) {
+            Ok(dur) => Self::try_from(dur),
+            Err(ParseDurationError::MissingSuffix) => {
+                let ms = value.parse().map_err(ParseDurationError::ParseIntError)?;
+                Duration::from_millis(ms).try_into()
+            }
+            Err(e) => Err(e.into()),
+        }
     }
 }
 
