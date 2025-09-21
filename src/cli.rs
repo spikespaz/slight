@@ -134,16 +134,24 @@ impl FromStr for Value {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, thiserror::Error)]
+pub enum DurationIntervalError {
+    #[error("duration must be greater than zero")]
+    IsZero,
+    #[error("{0}")]
+    Parse(#[from] ParseDurationError),
+}
+
 /// A wrapper of [`Duration`] that is non-zero and implements [`FromStr`].
 #[derive(Clone, Debug, PartialEq)]
 pub struct DurationInterval(pub Duration);
 
 impl TryFrom<Duration> for DurationInterval {
-    type Error = String;
+    type Error = DurationIntervalError;
 
     fn try_from(value: Duration) -> Result<Self, Self::Error> {
         if value.is_zero() {
-            Err("duration must be greater than zero".to_string())
+            Err(DurationIntervalError::IsZero)
         } else {
             Ok(Self(value))
         }
@@ -159,12 +167,11 @@ impl Deref for DurationInterval {
 }
 
 impl FromStr for DurationInterval {
-    type Err = String;
+    type Err = DurationIntervalError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let value = value.trim();
-        parse_duration(value)
-            .map_err(|e| e.to_string())
+        parse_duration(value.trim())
+            .map_err(Into::into)
             .and_then(Self::try_from)
     }
 }
