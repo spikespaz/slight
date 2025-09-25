@@ -178,6 +178,15 @@ impl FromStr for Value {
     }
 }
 
+impl std::fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Percent(pct) => write!(f, "{}%", pct * 100.0),
+            Value::Absolute(abs) => write!(f, "{abs}"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
 pub enum DurationIntervalError {
     #[error("duration must be greater than zero")]
