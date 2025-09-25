@@ -52,10 +52,11 @@ fn main() {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
             let actual = device.brightness().expect(FAIL_R_BRIGHTNESS);
+            let actual = Value::Absolute(actual);
             if percent {
                 let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
-                let percent = ((actual as f32 / max as f32) * 100.0).round() as u32;
-                println!("{percent}%");
+                let actual = actual.as_percent(max);
+                println!("{actual}");
             } else {
                 println!("{actual}");
             }
