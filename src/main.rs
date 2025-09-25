@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use once_cell::unsync::Lazy;
 
-use crate::cli::{ActionList, SlightCommand, Value};
+use crate::cli::{slight_command, Action, Value};
 use crate::device::{Backlight, BacklightDevice, Brightness, LedDevice};
 use crate::discovery::{Capability, CapabilityCheckError, DeviceDetail};
 
@@ -24,7 +24,7 @@ const CURRENT_BRIGHTNESS_LESS: &str = "current brightness is less than target, d
 const DEFAULT_DEVICE_PATHS: &[&str; 2] = &["/sys/class/backlight", "/sys/class/leds"];
 
 fn main() {
-    let args: SlightCommand = argh::from_env();
+    let args = slight_command().run();
 
     let found_devices = Lazy::<Vec<DeviceDetail>>::new(find_devices);
 
@@ -36,10 +36,8 @@ fn main() {
 
     let verbose = args.verbose;
 
-    use cli::{Action::*, ActionDecrease, ActionGet, ActionIncrease, ActionSet};
-
     match args.command {
-        List(ActionList { paths }) => {
+        Action::List { paths } => {
             for device in found_devices.iter() {
                 if paths {
                     println!("{}", device.path.display());
@@ -48,7 +46,7 @@ fn main() {
                 }
             }
         }
-        Get(ActionGet { percent }) => {
+        Action::Get { percent } => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
             let actual = device.brightness().expect(FAIL_R_BRIGHTNESS);
@@ -61,12 +59,12 @@ fn main() {
                 println!("{actual}");
             }
         }
-        Set(ActionSet {
+        Action::Set {
             value,
             increase,
             decrease,
             duration,
-        }) => {
+        } => {
             if increase && decrease {
                 panic!("{CONFLICT_INCREASE_DECREASE}");
             }
@@ -86,7 +84,7 @@ fn main() {
                 set_brightness(value, &device, duration.map(|dur| dur.0 / max));
             }
         }
-        Increase(ActionIncrease { amount, duration }) => {
+        Action::Increase { amount, duration } => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
             let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
@@ -98,7 +96,7 @@ fn main() {
                 duration.map(|dur| dur.0 / amount.to_absolute(max)),
             );
         }
-        Decrease(ActionDecrease { amount, duration }) => {
+        Action::Decrease { amount, duration } => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
             let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);

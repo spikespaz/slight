@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
-use argh::FromArgs;
+use bpaf::Bpaf;
 
 // TODO should the duration apply to interpolating between 0-100%,
 // or between the current and target brightness?
@@ -17,99 +17,72 @@ use argh::FromArgs;
 // which to interpolate the delta.
 
 /// Small CLI utility for Linux to control brightness on ACPI devices.
-#[derive(FromArgs, PartialEq, Debug)]
+#[derive(Debug, PartialEq, Bpaf)]
+#[bpaf(options)]
 pub struct SlightCommand {
-    /// what to do?
-    #[argh(subcommand)]
-    pub command: Action,
-    /// show errors
-    #[argh(switch, short = 'v')]
+    /// Show errors
+    #[bpaf(short('v'), long)]
     pub verbose: bool,
-    /// the device to control
-    #[argh(option, short = 'D')]
+    /// The device to control
+    #[bpaf(short('D'), long, argument("DEVICE"))]
     pub device: Option<PathBuf>,
+    /// What to do?
+    #[bpaf(external(action))]
+    pub command: Action,
 }
 
-#[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand)]
+#[derive(Debug, PartialEq, Bpaf)]
 pub enum Action {
-    List(ActionList),
-    Get(ActionGet),
-    Set(ActionSet),
-    Increase(ActionIncrease),
-    Decrease(ActionDecrease),
-}
-
-/// list all discovered backlight devices
-#[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "list")]
-pub struct ActionList {
-    /// list devices as full paths (not names)
-    #[argh(switch, short = 'P')]
-    pub paths: bool,
-}
-
-/// get the current brightness value
-#[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "get")]
-pub struct ActionGet {
-    /// show the value as a percentage
-    #[argh(switch, short = 'p')]
-    pub percent: bool,
-    // /// percentage curve function (raw to percent)
-    // #[argh(option)]
-    // pub curve: Option<String>,
-}
-
-/// set the brightness value
-#[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "set")]
-pub struct ActionSet {
-    /// percentage or value to set
-    #[argh(positional)]
-    pub value: Value,
-    /// only increase, never decrease
-    #[argh(switch, short = 'I')]
-    pub increase: bool,
-    /// only decrease, never increase
-    #[argh(switch, short = 'D')]
-    pub decrease: bool,
-    // /// percentage curve function
-    // #[argh(option)]
-    // pub curve: Option<String>,
-    /// duration of time when interpolating between 0% and 100%
-    #[argh(option, short = 't')]
-    pub duration: Option<DurationInterval>,
-}
-
-/// increase the brightness value
-#[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "inc")]
-pub struct ActionIncrease {
-    /// percentage or value to add
-    #[argh(positional)]
-    pub amount: Value,
-    // /// percentage curve function
-    // #[argh(option)]
-    // pub curve: Option<String>,
-    /// duration of time over which to interpolate the change
-    #[argh(option, short = 't')]
-    pub duration: Option<DurationInterval>,
-}
-
-/// decrease the brightness value
-#[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "dec")]
-pub struct ActionDecrease {
-    /// percentage or value to subtract
-    #[argh(positional)]
-    pub amount: Value,
-    // /// percentage curve function
-    // #[argh(option)]
-    // pub curve: Option<String>,
-    /// duration of time over which to interpolate the change
-    #[argh(option, short = 't')]
-    pub duration: Option<DurationInterval>,
+    /// Discover and list all backlight devices
+    #[bpaf(command("list"))]
+    List {
+        /// List devices as full paths (not names)
+        #[bpaf(short('P'), long)]
+        paths: bool,
+    },
+    /// Get the current brightness of DEVICE
+    #[bpaf(command("get"))]
+    Get {
+        /// Show the brightness as a percentage
+        #[bpaf(short('p'), long)]
+        percent: bool,
+    },
+    /// Set the brightness of DEVICE to VALUE
+    #[bpaf(command("set"))]
+    Set {
+        /// Only increase, never decrease
+        #[bpaf(short('I'), long("inc"))]
+        increase: bool,
+        /// Only decrease, never increase
+        #[bpaf(short('D'), long("dec"))]
+        decrease: bool,
+        /// Duration of time when interpolating between 0% and 100%
+        #[bpaf(short('t'), long, argument("DURATION"))]
+        duration: Option<DurationInterval>,
+        /// Percentage or value to set
+        #[bpaf(positional("VALUE"))]
+        value: Value,
+    },
+    /// Increase the brightness of DEVICE by AMOUNT
+    #[bpaf(command("inc"))]
+    Increase {
+        /// Duration of time over which to interpolate the change
+        #[bpaf(short('t'), long, argument("DURATION"))]
+        duration: Option<DurationInterval>,
+        /// Percentage or value to add
+        #[bpaf(positional("AMOUNT"))]
+        amount: Value,
+    },
+    /// Decrease the brightness of DEVICE by AMOUNT
+    #[bpaf(command("dec"))]
+    Decrease {
+        /// Duration of time over which to interpolate the change
+        #[bpaf(short('t'), long, argument("DURATION"))]
+        duration: Option<DurationInterval>,
+        /// Percentage or value to subtract
+        #[bpaf(positional("AMOUNT"))]
+        amount: Value,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]

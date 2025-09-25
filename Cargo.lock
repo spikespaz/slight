@@ -3,32 +3,24 @@
 version = 4
 
 [[package]]
-name = "argh"
-version = "0.1.10"
+name = "bpaf"
+version = "0.9.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab257697eb9496bf75526f0217b5ed64636a9cfafa78b8365c71bd283fcef93e"
+checksum = "473976d7a8620bb1e06dcdd184407c2363fe4fec8e983ee03ed9197222634a31"
 dependencies = [
- "argh_derive",
- "argh_shared",
+ "bpaf_derive",
 ]
 
 [[package]]
-name = "argh_derive"
-version = "0.1.10"
+name = "bpaf_derive"
+version = "0.5.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b382dbd3288e053331f03399e1db106c9fb0d8562ad62cb04859ae926f324fa6"
+checksum = "fefb4feeec9a091705938922f26081aad77c64cd2e76cd1c4a9ece8e42e1618a"
 dependencies = [
- "argh_shared",
  "proc-macro2",
  "quote",
- "syn 1.0.107",
+ "syn 2.0.106",
 ]
-
-[[package]]
-name = "argh_shared"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64cb94155d965e3d37ffbbe7cc5b82c3dd79dd33bd48e536f73d2cfb8d85506f"
 
 [[package]]
 name = "cfg-if"
@@ -110,7 +102,7 @@ checksum = "58bc9567378fc7690d6b2addae4e60ac2eeea07becb2c64b9f218b53865cba2a"
 name = "slight"
 version = "0.1.0"
 dependencies = [
- "argh",
+ "bpaf",
  "derive_more",
  "once_cell",
  "strum",
