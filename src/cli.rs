@@ -129,6 +129,13 @@ pub enum Value {
 }
 
 impl Value {
+    pub fn to_percent(self, max: u32) -> f32 {
+        match self {
+            Value::Percent(pct) => pct,
+            Value::Absolute(abs) => abs as f32 / max as f32,
+        }
+    }
+
     pub fn to_absolute(self, max: u32) -> u32 {
         match self {
             Value::Percent(pct) => (pct.clamp(0.0, 1.0) * max as f32).round() as u32,
