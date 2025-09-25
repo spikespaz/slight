@@ -276,7 +276,12 @@ mod tests {
 
     use test_case::{test_case, test_matrix};
 
-    use super::{parse_duration, ParseDurationError};
+    use super::{parse_duration, slight_command, ParseDurationError};
+
+    #[test]
+    fn bpaf_check_invariants() {
+        slight_command().check_invariants(false);
+    }
 
     #[test_case("100ms" => Duration::from_millis(100))]
     #[test_case("10ds" => Duration::from_secs_f64(1.0))]
