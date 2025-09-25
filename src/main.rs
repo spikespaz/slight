@@ -63,7 +63,7 @@ fn main() {
             value,
             increase,
             decrease,
-            duration,
+            interpolate,
         } => {
             if increase && decrease {
                 panic!("{CONFLICT_INCREASE_DECREASE}");
@@ -81,10 +81,13 @@ fn main() {
             } else if decrease && value > current {
                 println!("{CURRENT_BRIGHTNESS_LESS}");
             } else {
-                set_brightness(value, &device, duration.map(|dur| dur.0 / max));
+                set_brightness(value, &device, interpolate.duration.map(|dur| dur.0 / max));
             }
         }
-        Action::Increase { amount, duration } => {
+        Action::Increase {
+            amount,
+            interpolate,
+        } => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
             let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
@@ -93,10 +96,15 @@ fn main() {
             set_brightness(
                 value,
                 &device,
-                duration.map(|dur| dur.0 / amount.to_absolute(max)),
+                interpolate
+                    .duration
+                    .map(|dur| dur.0 / amount.to_absolute(max)),
             );
         }
-        Action::Decrease { amount, duration } => {
+        Action::Decrease {
+            amount,
+            interpolate,
+        } => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
             let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
@@ -105,7 +113,9 @@ fn main() {
             set_brightness(
                 value,
                 &device,
-                duration.map(|dur| dur.0 / amount.to_absolute(max)),
+                interpolate
+                    .duration
+                    .map(|dur| dur.0 / amount.to_absolute(max)),
             );
         }
     };

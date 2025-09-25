@@ -56,9 +56,9 @@ pub enum Action {
         /// Only decrease, never increase
         #[bpaf(short('D'), long("dec"), long("decrease"))]
         decrease: bool,
-        /// Duration of time when interpolating between 0% and 100%
-        #[bpaf(short('t'), long, argument("DURATION"))]
-        duration: Option<DurationInterval>,
+        //
+        #[bpaf(external(interpolation_options))]
+        interpolate: InterpolationOptions,
         /// Percentage or value to set
         #[bpaf(positional("VALUE"))]
         value: Value,
@@ -66,9 +66,8 @@ pub enum Action {
     /// Increase the brightness of DEVICE by AMOUNT
     #[bpaf(command("inc"))]
     Increase {
-        /// Duration of time over which to interpolate the change
-        #[bpaf(short('t'), long, argument("DURATION"))]
-        duration: Option<DurationInterval>,
+        #[bpaf(external(interpolation_options))]
+        interpolate: InterpolationOptions,
         /// Percentage or value to add
         #[bpaf(positional("AMOUNT"))]
         amount: Value,
@@ -76,13 +75,19 @@ pub enum Action {
     /// Decrease the brightness of DEVICE by AMOUNT
     #[bpaf(command("dec"))]
     Decrease {
-        /// Duration of time over which to interpolate the change
-        #[bpaf(short('t'), long, argument("DURATION"))]
-        duration: Option<DurationInterval>,
+        #[bpaf(external(interpolation_options))]
+        interpolate: InterpolationOptions,
         /// Percentage or value to subtract
         #[bpaf(positional("AMOUNT"))]
         amount: Value,
     },
+}
+
+#[derive(Debug, PartialEq, Bpaf)]
+pub struct InterpolationOptions {
+    /// Duration of time over which to interpolate the change
+    #[bpaf(short('t'), long, argument("DURATION"))]
+    pub duration: Option<DurationInterval>,
 }
 
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
