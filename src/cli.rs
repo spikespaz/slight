@@ -85,9 +85,12 @@ pub enum Action {
 
 #[derive(Debug, PartialEq, Bpaf)]
 pub struct InterpolationOptions {
-    /// Duration of time over which to interpolate the change
+    /// Maximum duration of time over which to interpolate the change
     #[bpaf(short('t'), long, argument("DURATION"))]
     pub duration: Option<DurationInterval>,
+    /// The maximum frequency of brightness updates (Hz)
+    #[bpaf(long("freq"), long("frequency"), argument("FREQUENCY"), fallback(30))]
+    pub frequency: u32,
 }
 
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
