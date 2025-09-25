@@ -87,7 +87,7 @@ pub enum Action {
 pub struct InterpolationOptions {
     /// Maximum duration of time over which to interpolate the change
     #[bpaf(short('t'), long, argument("DURATION"))]
-    pub duration: Option<DurationInterval>,
+    pub duration: Option<DurationArgument>,
     /// The maximum frequency of brightness updates (Hz)
     #[bpaf(long("freq"), long("frequency"), argument("FREQUENCY"), fallback(30))]
     pub frequency: u32,
@@ -186,9 +186,9 @@ pub enum DurationIntervalError {
 
 /// A wrapper of [`Duration`] that is non-zero and implements [`FromStr`].
 #[derive(Clone, Debug, PartialEq)]
-pub struct DurationInterval(pub Duration);
+pub struct DurationArgument(pub Duration);
 
-impl TryFrom<Duration> for DurationInterval {
+impl TryFrom<Duration> for DurationArgument {
     type Error = DurationIntervalError;
 
     fn try_from(value: Duration) -> Result<Self, Self::Error> {
@@ -200,7 +200,7 @@ impl TryFrom<Duration> for DurationInterval {
     }
 }
 
-impl Deref for DurationInterval {
+impl Deref for DurationArgument {
     type Target = Duration;
 
     fn deref(&self) -> &Self::Target {
@@ -208,7 +208,7 @@ impl Deref for DurationInterval {
     }
 }
 
-impl FromStr for DurationInterval {
+impl FromStr for DurationArgument {
     type Err = DurationIntervalError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
