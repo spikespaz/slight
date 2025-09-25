@@ -51,10 +51,10 @@ pub enum Action {
     #[bpaf(command("set"))]
     Set {
         /// Only increase, never decrease
-        #[bpaf(short('I'), long("inc"))]
+        #[bpaf(short('I'), long("inc"), long("increase"))]
         increase: bool,
         /// Only decrease, never increase
-        #[bpaf(short('D'), long("dec"))]
+        #[bpaf(short('D'), long("dec"), long("decrease"))]
         decrease: bool,
         /// Duration of time when interpolating between 0% and 100%
         #[bpaf(short('t'), long, argument("DURATION"))]
