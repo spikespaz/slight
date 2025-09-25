@@ -144,6 +144,14 @@ impl Value {
         .min(max)
     }
 
+    pub fn as_percent(self, max: u32) -> Self {
+        Value::Percent(self.to_percent(max))
+    }
+
+    pub fn as_absolute(self, max: u32) -> Self {
+        Value::Absolute(self.to_absolute(max))
+    }
+
     pub fn saturating_add(lhs: u32, rhs: Self, max: u32) -> u32 {
         lhs.saturating_add(rhs.to_absolute(max)).min(max)
     }
