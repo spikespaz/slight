@@ -74,20 +74,25 @@ fn main() {
             let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
             let current = device.brightness().expect(FAIL_R_BRIGHTNESS);
             let target = value.to_absolute(max);
+            let duration = interpolate
+                .duration
+                .map(|arg| arg.0)
+                .unwrap_or(Duration::ZERO);
 
             if target == current {
             } else if increase && target < current {
                 println!("{CURRENT_BRIGHTNESS_GREATER}");
             } else if decrease && target > current {
                 println!("{CURRENT_BRIGHTNESS_LESS}");
-            } else if let Some(duration) = interpolate.duration {
-                let delta = current.abs_diff(target);
-                let duration = duration.0.mul_f64(delta as f64 / max as f64);
-                if duration.is_zero() {
-                    device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
-                } else {
-                    ramp_brightness(&device, target, duration, interpolate.frequency);
-                }
+            } else {
+                set_brightness(
+                    &device,
+                    current,
+                    target,
+                    duration,
+                    interpolate.frequency,
+                    max,
+                );
             }
         }
         Action::Increase {
@@ -100,18 +105,19 @@ fn main() {
             let amount = amount.to_absolute(max);
             let current = device.brightness().expect(FAIL_R_BRIGHTNESS);
             let target = (current + amount).clamp(0, max);
+            let duration = interpolate
+                .duration
+                .map(|arg| arg.0)
+                .unwrap_or(Duration::ZERO);
 
-            if let Some(duration) = interpolate.duration {
-                let delta = current.abs_diff(target);
-                let duration = duration.0.mul_f64(delta as f64 / amount as f64);
-                if duration.is_zero() {
-                    device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
-                } else {
-                    ramp_brightness(&device, target, duration, interpolate.frequency);
-                }
-            } else {
-                device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
-            }
+            set_brightness(
+                &device,
+                current,
+                target,
+                duration,
+                interpolate.frequency,
+                amount,
+            );
         }
         Action::Decrease {
             amount,
@@ -123,18 +129,19 @@ fn main() {
             let amount = amount.to_absolute(max);
             let current = device.brightness().expect(FAIL_R_BRIGHTNESS);
             let target = (current - amount).clamp(0, max);
+            let duration = interpolate
+                .duration
+                .map(|arg| arg.0)
+                .unwrap_or(Duration::ZERO);
 
-            if let Some(duration) = interpolate.duration {
-                let delta = current.abs_diff(target);
-                let duration = duration.0.mul_f64(delta as f64 / amount as f64);
-                if duration.is_zero() {
-                    device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
-                } else {
-                    ramp_brightness(&device, target, duration, interpolate.frequency);
-                }
-            } else {
-                device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
-            }
+            set_brightness(
+                &device,
+                current,
+                target,
+                duration,
+                interpolate.frequency,
+                amount,
+            );
         }
     };
 }
@@ -147,6 +154,31 @@ fn find_devices() -> Vec<DeviceDetail> {
         .filter_map(Result::ok)
         .filter_map(|entry| DeviceDetail::try_from(entry.path()).ok())
         .collect()
+}
+
+fn set_brightness(
+    device: &dyn Brightness,
+    current: u32,
+    target: u32,
+    duration: Duration,
+    frequency: u32,
+    basis: u32,
+) {
+    if duration.is_zero() {
+        device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
+    } else {
+        let delta = current.abs_diff(target);
+        let duration = if basis == 0 {
+            Duration::ZERO
+        } else {
+            duration.mul_f64(delta as f64 / basis as f64)
+        };
+        if duration.is_zero() {
+            device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
+        } else {
+            ramp_brightness(device, target, duration, frequency);
+        }
+    }
 }
 
 fn ramp_brightness(device: &dyn Brightness, target: u32, duration: Duration, frequency: u32) {
