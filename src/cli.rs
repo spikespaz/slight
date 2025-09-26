@@ -6,16 +6,6 @@ use std::time::Duration;
 
 use bpaf::Bpaf;
 
-// TODO should the duration apply to interpolating between 0-100%,
-// or between the current and target brightness?
-// Which would be used more often, which should be the default, and
-// is it worth complicating thing with a flag, and if so, what should
-// the CLI for this look like?
-//
-// Currently `ActionSet` takes duration to mean between 0-100%,
-// and increase an decrease take it as the duration over
-// which to interpolate the delta.
-
 /// Small CLI utility for Linux to control brightness on ACPI devices.
 #[derive(Debug, PartialEq, Bpaf)]
 #[bpaf(options)]
