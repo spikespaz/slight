@@ -86,8 +86,13 @@ pub enum Action {
 #[derive(Debug, PartialEq, Bpaf)]
 pub struct InterpolationOptions {
     /// Maximum duration of time over which to interpolate the change
-    #[bpaf(short('t'), long, argument("DURATION"))]
-    pub duration: Option<DurationArgument>,
+    #[bpaf(
+        short('t'),
+        long,
+        argument("DURATION"),
+        fallback(DurationArgument::ZERO)
+    )]
+    pub duration: DurationArgument,
     /// The maximum frequency of brightness updates (Hz)
     #[bpaf(long("freq"), long("frequency"), argument("FREQUENCY"), fallback(30))]
     pub frequency: u32,
@@ -176,28 +181,12 @@ impl std::fmt::Display for Value {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, thiserror::Error)]
-pub enum DurationIntervalError {
-    #[error("duration must be greater than zero")]
-    IsZero,
-    #[error("{0}")]
-    Parse(#[from] ParseDurationError),
-}
-
 /// A wrapper of [`Duration`] that is non-zero and implements [`FromStr`].
 #[derive(Clone, Debug, PartialEq)]
 pub struct DurationArgument(pub Duration);
 
-impl TryFrom<Duration> for DurationArgument {
-    type Error = DurationIntervalError;
-
-    fn try_from(value: Duration) -> Result<Self, Self::Error> {
-        if value.is_zero() {
-            Err(DurationIntervalError::IsZero)
-        } else {
-            Ok(Self(value))
-        }
-    }
+impl DurationArgument {
+    pub const ZERO: Self = DurationArgument(Duration::ZERO);
 }
 
 impl Deref for DurationArgument {
@@ -209,17 +198,17 @@ impl Deref for DurationArgument {
 }
 
 impl FromStr for DurationArgument {
-    type Err = DurationIntervalError;
+    type Err = ParseDurationError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let value = value.trim();
         match parse_duration(value) {
-            Ok(dur) => Self::try_from(dur),
+            Ok(dur) => Ok(Self(dur)),
             Err(ParseDurationError::MissingSuffix) => {
                 let ms = value.parse().map_err(ParseDurationError::ParseIntError)?;
-                Duration::from_millis(ms).try_into()
+                Ok(Self(Duration::from_millis(ms)))
             }
-            Err(e) => Err(e.into()),
+            Err(e) => Err(e),
         }
     }
 }

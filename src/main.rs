@@ -11,6 +11,8 @@ use crate::cli::{slight_command, Action, Value};
 use crate::device::{Backlight, BacklightDevice, Brightness, LedDevice};
 use crate::discovery::{Capability, CapabilityCheckError, DeviceDetail};
 
+use self::cli::InterpolationOptions;
+
 const FAIL_FIND_DEFAULT_DEVICE: &str = "failed to find a default device";
 const FAIL_R_MAX_BRIGHTNESS: &str = "failed to read max_brightness";
 const FAIL_W_BRIGHTNESS: &str = "failed to write brightness";
@@ -63,7 +65,11 @@ fn main() {
             value,
             increase,
             decrease,
-            interpolate,
+            interpolate:
+                InterpolationOptions {
+                    duration,
+                    frequency,
+                },
         } => {
             if increase && decrease {
                 panic!("{CONFLICT_INCREASE_DECREASE}");
@@ -74,10 +80,6 @@ fn main() {
             let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
             let current = device.brightness().expect(FAIL_R_BRIGHTNESS);
             let target = value.to_absolute(max);
-            let duration = interpolate
-                .duration
-                .map(|arg| arg.0)
-                .unwrap_or(Duration::ZERO);
 
             if target == current {
             } else if increase && target < current {
@@ -85,19 +87,16 @@ fn main() {
             } else if decrease && target > current {
                 println!("{CURRENT_BRIGHTNESS_LESS}");
             } else {
-                set_brightness(
-                    &device,
-                    current,
-                    target,
-                    duration,
-                    interpolate.frequency,
-                    max,
-                );
+                set_brightness(&device, current, target, duration.0, frequency, max);
             }
         }
         Action::Increase {
             amount,
-            interpolate,
+            interpolate:
+                InterpolationOptions {
+                    duration,
+                    frequency,
+                },
         } => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
@@ -105,23 +104,16 @@ fn main() {
             let amount = amount.to_absolute(max);
             let current = device.brightness().expect(FAIL_R_BRIGHTNESS);
             let target = (current + amount).clamp(0, max);
-            let duration = interpolate
-                .duration
-                .map(|arg| arg.0)
-                .unwrap_or(Duration::ZERO);
 
-            set_brightness(
-                &device,
-                current,
-                target,
-                duration,
-                interpolate.frequency,
-                amount,
-            );
+            set_brightness(&device, current, target, duration.0, frequency, amount);
         }
         Action::Decrease {
             amount,
-            interpolate,
+            interpolate:
+                InterpolationOptions {
+                    duration,
+                    frequency,
+                },
         } => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
@@ -129,19 +121,8 @@ fn main() {
             let amount = amount.to_absolute(max);
             let current = device.brightness().expect(FAIL_R_BRIGHTNESS);
             let target = (current - amount).clamp(0, max);
-            let duration = interpolate
-                .duration
-                .map(|arg| arg.0)
-                .unwrap_or(Duration::ZERO);
 
-            set_brightness(
-                &device,
-                current,
-                target,
-                duration,
-                interpolate.frequency,
-                amount,
-            );
+            set_brightness(&device, current, target, duration.0, frequency, amount);
         }
     };
 }
