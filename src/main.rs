@@ -3,7 +3,7 @@ mod device;
 mod discovery;
 
 use std::path::Path;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use once_cell::unsync::Lazy;
 
@@ -49,14 +49,14 @@ fn main() {
         Action::Get { percent } => {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
-            let actual = device.brightness().expect(FAIL_R_BRIGHTNESS);
-            let actual = Value::Absolute(actual);
+            let current = device.brightness().expect(FAIL_R_BRIGHTNESS);
+            let current = Value::Absolute(current);
             if percent {
                 let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
-                let actual = actual.as_percent(max);
+                let actual = current.as_percent(max);
                 println!("{actual}");
             } else {
-                println!("{actual}");
+                println!("{current}");
             }
         }
         Action::Set {
@@ -73,15 +73,21 @@ fn main() {
             let device = LedDevice::new(device);
             let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
             let current = device.brightness().expect(FAIL_R_BRIGHTNESS);
-            let value = value.to_absolute(max);
+            let target = value.to_absolute(max);
 
-            if value == current {
-            } else if increase && value < current {
+            if target == current {
+            } else if increase && target < current {
                 println!("{CURRENT_BRIGHTNESS_GREATER}");
-            } else if decrease && value > current {
+            } else if decrease && target > current {
                 println!("{CURRENT_BRIGHTNESS_LESS}");
-            } else {
-                set_brightness(value, &device, interpolate.duration.map(|dur| dur.0 / max));
+            } else if let Some(duration) = interpolate.duration {
+                let delta = current.abs_diff(target);
+                let duration = duration.0.mul_f64(delta as f64 / max as f64);
+                if duration.is_zero() {
+                    device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
+                } else {
+                    ramp_brightness(&device, target, duration, interpolate.frequency);
+                }
             }
         }
         Action::Increase {
@@ -91,15 +97,21 @@ fn main() {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
             let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
-            let value = device.brightness().expect(FAIL_R_BRIGHTNESS);
-            let value = Value::saturating_add(value, amount, max);
-            set_brightness(
-                value,
-                &device,
-                interpolate
-                    .duration
-                    .map(|dur| dur.0 / amount.to_absolute(max)),
-            );
+            let amount = amount.to_absolute(max);
+            let current = device.brightness().expect(FAIL_R_BRIGHTNESS);
+            let target = (current + amount).clamp(0, max);
+
+            if let Some(duration) = interpolate.duration {
+                let delta = current.abs_diff(target);
+                let duration = duration.0.mul_f64(delta as f64 / amount as f64);
+                if duration.is_zero() {
+                    device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
+                } else {
+                    ramp_brightness(&device, target, duration, interpolate.frequency);
+                }
+            } else {
+                device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
+            }
         }
         Action::Decrease {
             amount,
@@ -108,15 +120,21 @@ fn main() {
             let device = args.device.unwrap_or(default_device(found_devices).path);
             let device = LedDevice::new(device);
             let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
-            let value = device.brightness().expect(FAIL_R_BRIGHTNESS);
-            let value = Value::saturating_sub(value, amount, max);
-            set_brightness(
-                value,
-                &device,
-                interpolate
-                    .duration
-                    .map(|dur| dur.0 / amount.to_absolute(max)),
-            );
+            let amount = amount.to_absolute(max);
+            let current = device.brightness().expect(FAIL_R_BRIGHTNESS);
+            let target = (current - amount).clamp(0, max);
+
+            if let Some(duration) = interpolate.duration {
+                let delta = current.abs_diff(target);
+                let duration = duration.0.mul_f64(delta as f64 / amount as f64);
+                if duration.is_zero() {
+                    device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
+                } else {
+                    ramp_brightness(&device, target, duration, interpolate.frequency);
+                }
+            } else {
+                device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
+            }
         }
     };
 }
@@ -131,33 +149,36 @@ fn find_devices() -> Vec<DeviceDetail> {
         .collect()
 }
 
-fn set_brightness(value: u32, device: &dyn Brightness, interval: Option<Duration>) {
+fn ramp_brightness(device: &dyn Brightness, target: u32, duration: Duration, frequency: u32) {
+    assert!(!duration.is_zero() && frequency > 0);
+
     let max = device.max_brightness().expect(FAIL_R_MAX_BRIGHTNESS);
-    let actual = device.brightness().expect(FAIL_R_BRIGHTNESS);
-    let target = std::cmp::min(value, max);
+    let start = device.brightness().expect(FAIL_R_BRIGHTNESS);
+    let target = target.min(max);
 
-    macro_rules! step_brightness {
-        ($range:expr, $interval:expr) => {
-            for value in $range {
-                device.set_brightness(value).expect(FAIL_W_BRIGHTNESS);
-                if value != target {
-                    std::thread::sleep($interval);
-                }
-            }
-        };
+    let delta = start.abs_diff(target);
+    if delta == 0 {
+        return;
     }
+    let steps = ((duration.as_secs_f64() * frequency as f64).floor() as u32)
+        .max(1)
+        .min(delta);
+    let interval = duration / steps;
+    let mut next_update = Instant::now() + interval;
 
-    use std::cmp::Ordering;
-    match (target.cmp(&actual), interval) {
-        (Ordering::Greater, Some(interval)) => {
-            step_brightness!((actual + 1)..=target, interval);
+    for step in 1..=steps {
+        let now = Instant::now();
+        if now < next_update {
+            std::thread::sleep(next_update - now);
         }
-        (Ordering::Less, Some(interval)) => {
-            step_brightness!((target..actual).rev(), interval);
-        }
-        (Ordering::Greater | Ordering::Less, None) => {
-            device.set_brightness(target).expect(FAIL_W_BRIGHTNESS);
-        }
-        (Ordering::Equal, _) => {}
+        next_update += interval;
+        let prog = (delta as u64 * step as u64 / steps as u64) as u32;
+        let value = if target >= start {
+            start + prog
+        } else {
+            start - prog
+        };
+
+        device.set_brightness(value).expect(FAIL_W_BRIGHTNESS);
     }
 }
