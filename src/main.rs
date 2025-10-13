@@ -134,8 +134,7 @@ fn main() -> Result<()> {
             let max = read_max_brightness(&device)?;
             let amount = amount.to_absolute(max);
             let current = read_brightness(&device)?;
-            let target = current.saturating_sub(amount).clamp(0, max);
-
+            let target = current.saturating_sub(amount).min(max);
 
             set_brightness(&device, current, target, duration.0, frequency, amount)
         }
