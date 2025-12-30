@@ -43,12 +43,10 @@ Assuming you have Rust installed, with `$HOME/.cargo/bin` added to your environm
 $ cargo install slight
 ```
 
-> **Note:**
+> [!IMPORTANT]
 >
 > The binary will need to be run with `sudo` unless you install the requisite
-> `udev` rules. These can be found in `backlight-90.rules` in the root of the repository.
->
-> Your user must also be added to the `video` group to satisfy these rules.
+> `udev` rules.
 >
 > Copy `backlight-90.rules` to `/etc/udev/rules.d`, and add your user to the `video` group.
 
@@ -60,12 +58,13 @@ $ sudo usermod -aG video $USER
 
 ### NixOS
 
-> **Note:**
+> [!TIP]
 >
 > Don't forget to install the `udev` rules!
+> 
+> If `slight` is used in a scripting capacity, copy the lines from `90-backlight.rules` to a string for `services.udev.extraRules`.
 >
-> This can be done via the NixOS option `services.udev.extraRules` or
-> `services.udev.packages`.
+> Alternatively, just add the package to `service.udev.packages`.
 >
 > For example, in your system configuration:
 >
