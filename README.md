@@ -2,27 +2,31 @@
 
 Smooth Light - Backlight and LED devices control for Linux.
 
-This is essentially a reimplimentation of `brightnessctl` and `light`. So why does it exist?
+This program attempts to be a reimplementation of tools such as `brightnessctl` and `light`, but with better ergonomics for scripting purposes.
 
-**TL;DR:** Minimize the amount of scripting you have to do when integrating with other programs or services.
+## Motive
 
-The two utilities (`brightnessctl` and `light`) only perform very basic functions.
-They can increment and decrement (or set) brightness levels of devices in `/sys/class/backlight` and `/sys/class/leds`.
-That's great, and wonderful how simple and straightforward they are, however if you want to do anything more
-complicated you'll need to write wrappers in another language (usually shell code) to take care of that.
+The two most common utilities (`brightnessctl` and `light`) only perform very basic functions. `clight` is in its own category with regards to feature selection.
+
+They can all increment and decrement (or set) brightness levels of devices in `/sys/class/backlight` and `/sys/class/leds`.
+
+For what they are, they work fine. But if you want--for example--all of your screeens to fade to black, you'll be implementing a some buggy shell code to interpolate the `brightnessctl` calls over time. Hence, `slight`, which is an excersise in foresight.
 
 Considering that actually using the `sysfs` ABIs for changing device brightness is so simple,
 you may as well just do it with your own scripts. **Slight** exists so that you don't have to reinvent the
 wheel anymore.
 
-## Advantages
+## Features
 
 - [X] Interpolate brightness adjustments over a duration of time
 - [X] Conditionally adjust brightness only if it is currently above or below the target.
-- [ ] Direct integration with other programs (such as [Gammastep] or [Redshift], with hooks).
 - [ ] Control brightness external monitors with DDC/CI.
-- [ ] Control multiple devices at the same time, so that one command affects multiple.
-- [ ] Define custom percentage curves so that brightness does not adjust linearly, but rather according to your eye's perception.
+- [ ] Control multiple devices at the same time,
+  - [ ] with different perceived brightness levels
+  - [ ] and normalized by custom curve configurations.
+- [ ] Direct integration with other programs (such as [Gammastep] or [Redshift], with hooks).
+- [ ] JSON with `stdio`.
+- [ ] Ambient light sensor integration.
 
 [gammastep]: https://gitlab.com/chinstrap/gammastep
 [redshift]: http://jonls.dk/redshift/
@@ -39,12 +43,10 @@ Assuming you have Rust installed, with `$HOME/.cargo/bin` added to your environm
 $ cargo install slight
 ```
 
-> **Note:**
+> [!IMPORTANT]
 >
 > The binary will need to be run with `sudo` unless you install the requisite
-> `udev` rules. These can be found in `backlight-90.rules` in the root of the repository.
->
-> Your user must also be added to the `video` group to satisfy these rules.
+> `udev` rules.
 >
 > Copy `backlight-90.rules` to `/etc/udev/rules.d`, and add your user to the `video` group.
 
@@ -56,12 +58,13 @@ $ sudo usermod -aG video $USER
 
 ### NixOS
 
-> **Note:**
+> [!TIP]
 >
 > Don't forget to install the `udev` rules!
+> 
+> If `slight` is used in a scripting capacity, copy the lines from `90-backlight.rules` to a string for `services.udev.extraRules`.
 >
-> This can be done via the NixOS option `services.udev.extraRules` or
-> `services.udev.packages`.
+> Alternatively, just add the package to `service.udev.packages`.
 >
 > For example, in your system configuration:
 >
@@ -100,6 +103,7 @@ Below is an example showing how to use the overlay, so that you can use the pack
       ];
     };
   in {
+    packages.${system}.slight = pkgs.slight;
     # ...
   };
 }
